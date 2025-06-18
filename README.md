@@ -48,10 +48,10 @@ We propose TesserAct, **the first open-source and generalized 4D World Model for
       <a href="#inference">Inference</a>
     </li>
     <li>
-      <a href="#citation">Citation</a>
+      <a href="#acknowledgement">Acknowledgement</a>
     </li>
     <li>
-      <a href="#acknowledgement">Acknowledgement</a>
+      <a href="#citation">Citation</a>
     </li>
   </ol>
 </details>
@@ -159,6 +159,18 @@ Below is a list of TODOs for the inference part.
 - [ ] Blender rendering code (check package [PyBlend](https://github.com/anyeZHY/PyBlend)!)
 - [ ] Normal Integration -->
 
+
+
+## Acknowledgements
+We would like to thank the following works for their code and models:
+- Training: [Coconut](https://arxiv.org/abs/2412.06769), [Qwen](https://huggingface.co/Qwen) and [MVoT](https://arxiv.org/pdf/2501.07542)
+- Datasets: [VSP](https://arxiv.org/abs/2407.01863), [Blink](https://zeyofu.github.io/blink/), [COMT](https://arxiv.org/abs/2412.12932) and [SAT](https://arxiv.org/abs/2412.07755)
+
+We are extremely grateful to Haoyu Zhen, Bairu Hou, Guangtao, Zeng, Yuncong Yang, Ziwei Liu,
+Jiaben Chen, Zonghan Yang, Sunli Chen, Lixing Fang, and many other friends in our [Embodied AGI Lab](https://embodied-agi.cs.umass.edu/)
+for their helpful feedback and insightful discussions.
+
+
 ## Citation
 If you find our work useful, please consider citing:
 <!-- ```bibtex
@@ -172,14 +184,3 @@ If you find our work useful, please consider citing:
   url={https://arxiv.org/abs/2504.20995}, 
 }
 ``` -->
-
-## Acknowledgements
-We would like to thank the following works for their code and models:
-- Training: [Coconut](https://arxiv.org/abs/2412.06769), [Qwen](https://huggingface.co/Qwen) and [MVoT](https://arxiv.org/pdf/2501.07542)
-- Datasets: [VSP](https://arxiv.org/abs/2407.01863), [Blink](https://zeyofu.github.io/blink/), [COMT](https://arxiv.org/abs/2412.12932) and [SAT](https://arxiv.org/abs/2412.07755)
-
-We are extremely grateful to Haoyu Zhen, Bairu Hou, Guangtao, Zeng, Yuncong Yang, Ziwei Liu,
-Jiaben Chen, Zonghan Yang, Sunli Chen, Lixing Fang, and many other friends in our [Embodied AGI Lab](https://embodied-agi.cs.umass.edu/)
-for their helpful feedback and insightful discussions.
-
-
