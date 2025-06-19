@@ -69,7 +69,7 @@ We provide a sample dataset of 100 examples for the VSP spatial reasoning task. 
 {
     "text_input": "Question",
     "text_output": "Answer",
-    "image_input": ["input1.jpg",],
+    "image_input": ["input1.jpg"],
     "image_output": "helper_image.jpg"
 }
 ```
@@ -114,8 +114,8 @@ We would like to thank the following works for their code and models:
 - Training: [Coconut](https://arxiv.org/abs/2412.06769), [Qwen](https://huggingface.co/Qwen) and [MVoT](https://arxiv.org/pdf/2501.07542)
 - Datasets: [VSP](https://arxiv.org/abs/2407.01863), [Blink](https://zeyofu.github.io/blink/), [COMT](https://arxiv.org/abs/2412.12932) and [SAT](https://arxiv.org/abs/2412.07755)
 
-We are extremely grateful to Haoyu Zhen, Bairu Hou, Guangtao Zeng, Yuncong Yang, Ziwei Liu,
-Jiaben Chen, Zonghan Yang, Sunli Chen, Lixing Fang, and many other friends in our [Embodied AGI Lab](https://embodied-agi.cs.umass.edu/)
+We are extremely grateful to Haoyu Zhen, Bairu Hou, Guangtao Zeng, Yuncong Yang,
+Jiaben Chen, Ziwei Liu, Zonghan Yang, Sunli Chen, Lixing Fang, and many other friends in our [Embodied AGI Lab](https://embodied-agi.cs.umass.edu/)
 for their helpful feedback and insightful discussions.
 
 
