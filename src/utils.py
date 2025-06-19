@@ -47,6 +47,18 @@ def load_jsonl_dataset(jsonl_path):
         data = data[:]
     return Dataset.from_list(data)
 
+def place_input_image(text, image_pad="<|vision_start|><|image_pad|><|vision_end|>", image_placeholder="<image>", sep_token="<|im_start|>assistant") -> str:
+
+    assert sep_token in text
+
+    t1, t2 = text.split(sep_token)
+
+    if image_placeholder in t1:
+        t1 = t1.replace(image_pad, '')
+        t1 = t1.replace(image_placeholder, image_pad)
+
+    return t1 + sep_token + t2
+
 def place_output_image(text, image_pad="<|vision_start|><|image_pad|><|vision_end|>", latent_placeholder="<output_image>", sep_token="<|im_start|>assistant") -> str:
 
     if latent_placeholder in text:

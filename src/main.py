@@ -3,7 +3,6 @@ from transformers import Qwen2_5_VLForConditionalGeneration, Qwen2_5_VLConfig, A
 from PIL import Image
 import os
 import logging
-import argparse
 
 from trl import SFTTrainer, SFTConfig
 from qwen_vl_utils import process_vision_info
@@ -61,14 +60,8 @@ for param in model.visual.parameters():
 
 def collate_fn_stage1(examples):
     texts = [processor.apply_chat_template(example, tokenize=False) for example in examples]
-    
-    update_texts = []
-    for t in texts:
-        t1, t2 = t.split('<|im_start|>assistant')
-        t1 = t1.replace('<|vision_start|><|image_pad|><|vision_end|>', '').replace('<image>', '<|vision_start|><|image_pad|><|vision_end|>')
-        update_texts.append(t1 + '<|im_start|>assistant' + t2)
-    texts = update_texts
 
+    texts = [place_input_image(text) for text in texts]
     texts = [place_output_image(text) for text in texts]
     texts = replace_visual_spectial_tokens(texts)
 
@@ -119,13 +112,7 @@ def collate_fn_stage1(examples):
 def collate_fn_stage2(examples):
     texts = [processor.apply_chat_template(example, tokenize=False) for example in examples]
     
-    update_texts = []
-    for t in texts:
-        t1, t2 = t.split('<|im_start|>assistant')
-        t1 = t1.replace('<|vision_start|><|image_pad|><|vision_end|>', '').replace('<image>', '<|vision_start|><|image_pad|><|vision_end|>')
-        update_texts.append(t1 + '<|im_start|>assistant' + t2)
-    texts = update_texts
-
+    texts = [place_input_image(text) for text in texts]
     texts = [place_output_image(text) for text in texts]
     texts = replace_visual_spectial_tokens(texts)
     
