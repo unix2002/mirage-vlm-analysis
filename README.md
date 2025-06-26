@@ -11,13 +11,20 @@
     <a href="https://people.csail.mit.edu/ganchuang">Chuang Gan</a>
   </p>
   <p align="center">
-    <a href="https://vlm-mirage.github.io">
+    <a href="https://www.arxiv.org/abs/2506.17218">
       <img src='https://img.shields.io/badge/Paper-PDF-red?style=flat&logo=arXiv&logoColor=red' alt='Paper PDF'>
     </a>
     <a href='https://vlm-mirage.github.io' style='padding-left: 0.5rem;'>
       <img src='https://img.shields.io/badge/Project-Page-blue?style=flat&logo=Google%20chrome&logoColor=blue' alt='Project Page'>
     </a>
   </p>
+</p>
+
+
+We propose Mirage, **interleaving latent visual tokens**, which represent compact imagery visual features, with explicit text tokens to solve diverse spatial reasoning multimodal tasks, boosting the reasoning performance without the full pixel-level image generation.
+
+<p align="center">
+    <img src="asset/teaser.png" alt="Logo" width="190%">
 </p>
 
 <br>
@@ -39,10 +46,10 @@
       <a href="#inference">Inference</a>
     </li> -->
     <li>
-      <a href="#acknowledgement">Acknowledgement</a>
+      <a href="#citation">Citation</a>
     </li>
     <li>
-      <a href="#citation">Citation</a>
+      <a href="#acknowledgement">Acknowledgement</a>
     </li>
   </ol>
 </details>
@@ -79,6 +86,10 @@ We train our model in two stages:
 - Stage 1 jointly supervises text and latent visual tokens, grounding the latter in the visual subspace.
 - Stage 2 drops the latent supervision, anchoring the grounded latent tokens for subsequent text generation.
 
+<p align="center">
+    <img src="asset/pipeline.png" alt="Logo" width="190%">
+</p>
+
 Run the following commands to reproduce the training. Make sure to configure the `data_path` and `model_path` as needed.
 
 **Training Stage 1**
@@ -109,6 +120,21 @@ python src/main.py \
 <!-- ## Inference -->
 
 
+## Citation
+If you find our work useful, please consider citing: 
+
+```bibtex
+@article{yang2025machine,
+  title={Machine Mental Imagery: Empower Multimodal Reasoning with Latent Visual Tokens}, 
+  author={Zeyuan Yang and Xueyang Yu and Delin Chen and Maohao Shen and Chuang Gan},
+  year={2025},
+  eprint={2506.17218},
+  archivePrefix={arXiv},
+  primaryClass={cs.CV},
+  url={https://arxiv.org/abs/2506.17218}, 
+}
+```
+
 ## Acknowledgements
 We would like to thank the following works for their code and models:
 - Training: [Coconut](https://arxiv.org/abs/2412.06769), [Qwen](https://huggingface.co/Qwen) and [MVoT](https://arxiv.org/pdf/2501.07542)
@@ -117,18 +143,3 @@ We would like to thank the following works for their code and models:
 We are extremely grateful to Haoyu Zhen, Bairu Hou, Guangtao Zeng, Yuncong Yang,
 Jiaben Chen, Ziwei Liu, Zonghan Yang, Sunli Chen, Lixing Fang, and many other friends in our [Embodied AGI Lab](https://embodied-agi.cs.umass.edu/)
 for their helpful feedback and insightful discussions.
-
-
-<!-- ## Citation
-If you find our work useful, please consider citing: -->
-<!-- ```bibtex
-@article{yang2025machine,
-  title={Machine Mental Imagery: Empower Multimodal Reasoning with Latent Visual Tokens}, 
-  author={Zeyuan Yang and Xueyang Yu and Delin Chen and Maohao Shen and Chuang Gan},
-  year={2025},
-  eprint={},
-  archivePrefix={arXiv},
-  primaryClass={cs.CV},
-  url={https://arxiv.org/abs/}, 
-}
-``` -->
