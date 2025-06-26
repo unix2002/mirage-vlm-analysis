@@ -21,7 +21,7 @@
 </p>
 
 
-We propose Mirage, **interleaving latent visual tokens**, which represent compact imagery visual features, with explicit text tokens to solve diverse spatial reasoning multimodal tasks, boosting the reasoning performance without the full pixel-level image generation.
+We propose **Mirage**, **interleaving latent visual tokens**, which represent compact imagery visual features, with explicit text tokens to solve diverse **multimodal reasoning** tasks, boosting the reasoning performance without the full pixel-level image generation.
 
 <p align="center">
     <img src="asset/teaser.png" alt="Logo" width="190%">
@@ -135,7 +135,7 @@ If you find our work useful, please consider citing:
 }
 ```
 
-## Acknowledgements
+## Acknowledgement
 We would like to thank the following works for their code and models:
 - Training: [Coconut](https://arxiv.org/abs/2412.06769), [Qwen](https://huggingface.co/Qwen) and [MVoT](https://arxiv.org/pdf/2501.07542)
 - Datasets: [VSP](https://arxiv.org/abs/2407.01863), [Blink](https://zeyofu.github.io/blink/), [COMT](https://arxiv.org/abs/2412.12932) and [SAT](https://arxiv.org/abs/2412.07755)
