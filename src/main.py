@@ -32,7 +32,7 @@ logging.info('=='*20)
 cache_dir = args.cache_dir
 os.environ['HF_HOME'] = cache_dir
 
-processor = AutoProcessor.from_pretrained(args.model)
+processor = AutoProcessor.from_pretrained(args.model, cache_dir=cache_dir)
 processor.tokenizer.add_tokens("<|latent_pad|>", special_tokens=True)
 processor.tokenizer.add_tokens("<|latent_start|>", special_tokens=True)
 processor.tokenizer.add_tokens("<|latent_end|>", special_tokens=True)
@@ -40,10 +40,11 @@ processor.tokenizer.add_tokens("<|latent_end|>", special_tokens=True)
 
 if args.stage in ['stage1']: 
     model_path = args.model
+    config = Qwen2_5_VLConfig.from_pretrained(model_path, cache_dir=cache_dir)
 elif args.stage in ['stage2']:
     model_path = args.load_model_path
+    config = Qwen2_5_VLConfig.from_pretrained(model_path)
 
-config = Qwen2_5_VLConfig.from_pretrained(model_path)
 config.compress_strategy = args.compress_strategy
 config.latent_size = args.latent_size
 config.stage = args.stage
