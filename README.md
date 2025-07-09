@@ -55,7 +55,8 @@ We propose **Mirage**, **interleaving latent visual tokens**, which represent co
 </details>
 
 ## News
-- [2025-06-19] We have released the training and inference code!
+- [2025-07-09] We have released our training data for VSP spatial planning and spatial reasoning tasks.
+- [2025-06-19] We have released the training code!
 
 ## Installation
 Create a conda environment and install the required packages:
@@ -81,6 +82,13 @@ We provide a sample dataset of 100 examples for the VSP spatial reasoning task. 
 }
 ```
 
+We also provide the training data for VSP spatial reasoning and planning tasks. To extract the contents:
+
+```bash
+cd ./data/vsp_spatial_reasoning
+tar -xzf vsp_spatial_reasoning.tar.gz
+```
+
 ## Training
 We train our model in two stages:
 - Stage 1 jointly supervises text and latent visual tokens, grounding the latter in the visual subspace.
@@ -95,7 +103,7 @@ Run the following commands to reproduce the training. Make sure to configure the
 **Training Stage 1**
 ```bash
 python src/main.py \
-    --model Qwen/Qwen2.5-VL-7B-Instruct --epochs 10 \
+    --model Qwen/Qwen2.5-VL-7B-Instruct --epochs 15 \
     --task vsp-spatial-reasoning \
     --latent_size 4 \
     --stage stage1 \
@@ -107,13 +115,13 @@ python src/main.py \
 **Training Stage 2**
 ```bash
 python src/main.py \
-    --model Qwen/Qwen2.5-VL-7B-Instruct --epochs 10 \
+    --model Qwen/Qwen2.5-VL-7B-Instruct --epochs 15 \
     --task vsp-spatial-reasoning \
     --latent_size 4 \
     --stage stage2 \
     --data_path ./data/sample.jsonl \
     --log_file ./log.txt \
-    --load_model_path ./checkpoints/model_stage1
+    --load_model_path ./checkpoints/model_stage1 \
     --save_model_path ./checkpoints/model_stage2 
 ```
 
