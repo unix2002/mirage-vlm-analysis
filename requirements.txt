@@ -1,4 +1,5 @@
 torch
+torchvision
 datasets
 trl==0.15.2
 qwen_vl_utils

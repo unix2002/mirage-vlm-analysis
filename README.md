@@ -82,11 +82,11 @@ We provide a sample dataset of 100 examples for the VSP spatial reasoning task. 
 }
 ```
 
-We also provide the training data for VSP spatial reasoning and planning tasks. To extract the contents:
+We also provide the training data for VSP spatial planning tasks. To extract the contents:
 
 ```bash
-cd ./data/vsp_spatial_reasoning
-tar -xzf vsp_spatial_reasoning.tar.gz
+cd ./data/vsp_spatial_planning
+tar -xzf vsp_spatial_planning.tar.gz
 ```
 
 ## Training
@@ -98,7 +98,8 @@ We train our model in two stages:
     <img src="asset/pipeline.png" alt="Logo" width="190%">
 </p>
 
-Run the following commands to reproduce the training. Make sure to configure the `data_path` and `model_path` as needed.
+Run the following commands to reproduce the training. Make sure to configure the `data_path` and `model_path` as needed. 
+The base model (Qwen2.5-VL) will be automatically downloaded in `./cache`, specify `cache_dir` if you want to change huggingface download folder.
 
 **Training Stage 1**
 ```bash
@@ -109,7 +110,8 @@ python src/main.py \
     --stage stage1 \
     --data_path ./data/sample.jsonl \
     --log_file ./log.txt \
-    --save_model_path ./checkpoints/model_stage1 
+    --save_model_path ./checkpoints/model_stage1  \
+    --cache_dir PATH_TO_HF_CACHE \
 ```
 
 **Training Stage 2**
@@ -122,7 +124,8 @@ python src/main.py \
     --data_path ./data/sample.jsonl \
     --log_file ./log.txt \
     --load_model_path ./checkpoints/model_stage1 \
-    --save_model_path ./checkpoints/model_stage2 
+    --save_model_path ./checkpoints/model_stage2 \
+    --cache_dir PATH_TO_HF_CACHE \
 ```
 
 <!-- ## Inference -->

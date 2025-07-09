@@ -29,7 +29,7 @@ logging.info(args)
 logging.info('=='*20)
 
 # Load the model and processor
-cache_dir = 'PathToHFCache'
+cache_dir = args.cache_dir
 os.environ['HF_HOME'] = cache_dir
 
 processor = AutoProcessor.from_pretrained(args.model)
@@ -37,12 +37,21 @@ processor.tokenizer.add_tokens("<|latent_pad|>", special_tokens=True)
 processor.tokenizer.add_tokens("<|latent_start|>", special_tokens=True)
 processor.tokenizer.add_tokens("<|latent_end|>", special_tokens=True)
 
-config = Qwen2_5_VLConfig.from_pretrained(args.load_model_path)
+
+if args.stage in ['stage1']: 
+    model_path = args.model
+elif args.stage in ['stage2']:
+    model_path = args.load_model_path
+
+config = Qwen2_5_VLConfig.from_pretrained(model_path)
 config.compress_strategy = args.compress_strategy
 config.latent_size = args.latent_size
 config.stage = args.stage
 
-model = Qwen2_5_VLForConditionalGeneration.from_pretrained(args.load_model_path, config=config, device_map="auto", torch_dtype=torch.bfloat16)
+if args.stage in ['stage1']:
+    model = Qwen2_5_VLForConditionalGeneration.from_pretrained(model_path, config=config, device_map="auto", torch_dtype=torch.bfloat16, cache_dir=cache_dir)
+elif args.stage in ['stage2']:
+    model = Qwen2_5_VLForConditionalGeneration.from_pretrained(model_path, config=config, device_map="auto", torch_dtype=torch.bfloat16)
 
 if args.stage in ['stage1']: model.resize_token_embeddings(len(processor.tokenizer))
 

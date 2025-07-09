@@ -24,6 +24,8 @@ def get_args():
     
     parser.add_argument("--save_model_path", type=str, default='./checkpoints/model_stage1')
     parser.add_argument("--load_model_path", type=str, default='./checkpoints/model_stage1')
+    
+    parser.add_argument("--cache_dir", type=str, default='./cache')
 
     return parser.parse_args()
 

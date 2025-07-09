@@ -2,7 +2,8 @@ from PIL import Image
 
 def single_input_image_preprocess_function(sample):
     # Load images
-    image = Image.open(sample["image_input"][0]).convert("RGB") 
+    
+    image = Image.open(sample["image_input"]).convert("RGB") 
     image_output = Image.open(sample["image_output"]).convert("RGB")
 
     # Format conversations
