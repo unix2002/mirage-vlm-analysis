@@ -28,24 +28,44 @@ three research questions:
 ---
 
 ## Repository Structure
+
 ```
 .
-├── README.md                         ← You are here
+├── README.md                         ← This file (Week 1, ours)
+├── data_reference/                   ← Reference sample for validation (Week 1, ours)
+│   ├── metadata.json
+│   ├── latent_to_visual_attn.pt
+│   ├── hidden_states.pt
+│   └── embeddings.pt
+├── report/                           ← Session log (Week 1, ours)
+│   └── session_report.tex
 ├── src/
-│   ├── hooks.py                      ← MirageAnalyzer class (forward hooks)
+│   │
+│   │  ── Week 1 additions (ours) ──
+│   ├── hooks.py                      ← MirageAnalyzer — forward hooks
 │   ├── extract.py                    ← Batch extraction pipeline (samples → .pt + JSON)
-│   ├── main.py                       ← Mirage training entry point
+│   │
+│   │  ── Original Mirage codebase ──
+│   ├── main.py                       ← Training entry point
 │   ├── task.py                       ← Dataset preprocessing
 │   ├── trainer.py                    ← Training loop wrapper
-│   ├── utils.py                      ← Token manipulation, batch processing
+│   ├── utils.py                      ← Token manipulation, batch ops
 │   └── test.py                       ← Debug utilities
-├── data_reference/                   ← One sample for validation (no large logits)
-│   ├── metadata.json                 ← Sample index with token positions
-│   ├── latent_to_visual_attn.pt      ← 28-layer attention submatrices
-│   ├── hidden_states.pt              ← Layers 25–27 hidden states
-│   └── embeddings.pt                 ← Post-scatter embeddings
-└── report/
-    └── session_report.tex            ← Week 1 session log (LaTeX)
+│
+└── data/                             ← Not in this repo (stored on Snellius)
+    ├── examples/                     ← 9 VSP samples (original)
+    ├── vsp_spatial_planning/         ← 1,000-sample training set (Week 1, ours)
+    └── extracted/                    ← 10 extracted samples, ~4.8 GB (Week 1, ours)
+        ├── metadata.json
+        └── tensors/sample_*/
+            ├── latent_to_visual_attn.pt
+            ├── hidden_states.pt
+            ├── embeddings.pt
+            └── logits.pt
+```
+
+**Original codebase:** [UMass-Embodied-AGI/Mirage](https://github.com/UMass-Embodied-AGI/Mirage)  
+**Our additions:** `hooks.py`, `extract.py`, `data_reference/`, `report/`, and all extracted data.
 ```
 
 ---
