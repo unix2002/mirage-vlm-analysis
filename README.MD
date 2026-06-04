@@ -1,4 +1,3 @@
-```markdown
 # Mirage VLM — Latent Reasoning Analysis
 
 Interactive visual analytics for inspecting latent reasoning in vision-language models.  
@@ -29,7 +28,6 @@ three research questions:
 ---
 
 ## Repository Structure
-
 ```
 .
 ├── README.md                         ← You are here
