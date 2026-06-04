@@ -48,8 +48,6 @@ four research questions:
 │   ├── trainer.py                        ← Training loop wrapper (original)
 │   ├── utils.py                          ← Token manipulation, batch processing (original)
 │   └── test.py                           ← Inference / debug utilities (original)
-└── report/
-    └── session_report.tex                ← Week 1 session log (LaTeX)
 ```
 
 **Our additions (Week 1):** `hooks.py`, `extract.py`, `data_reference/`, this README, `SCHEDULE.md`.
