@@ -31,41 +31,43 @@ three research questions:
 
 ```
 .
-├── README.md                         ← This file (Week 1, ours)
-├── data_reference/                   ← Reference sample for validation (Week 1, ours)
-│   ├── metadata.json
-│   ├── latent_to_visual_attn.pt
-│   ├── hidden_states.pt
-│   └── embeddings.pt
-├── report/                           ← Session log (Week 1, ours)
-│   └── session_report.tex
+├── README.md
+├── data_reference/                       ← Week 1 additions
+│   ├── metadata.json                     ← Sample index (10 samples, token positions)
+│   ├── latent_to_visual_attn.pt          ← 28-layer attention submatrices (RQ1)
+│   ├── hidden_states.pt                  ← Layers 25–27 hidden states (RQ2)
+│   └── embeddings.pt                     ← Post-scatter embeddings (RQ2 alt)
 ├── src/
 │   │
-│   │  ── Week 1 additions (ours) ──
-│   ├── hooks.py                      ← MirageAnalyzer — forward hooks
-│   ├── extract.py                    ← Batch extraction pipeline (samples → .pt + JSON)
+│   │  ── Week 1 additions ──
+│   ├── hooks.py                          ← MirageAnalyzer class (forward hooks)
+│   ├── extract.py                        ← Batch extraction pipeline (samples → .pt + JSON)
 │   │
 │   │  ── Original Mirage codebase ──
-│   ├── main.py                       ← Training entry point
-│   ├── task.py                       ← Dataset preprocessing
-│   ├── trainer.py                    ← Training loop wrapper
-│   ├── utils.py                      ← Token manipulation, batch ops
-│   └── test.py                       ← Debug utilities
-│
-└── data/                             ← Not in this repo (stored on Snellius)
-    ├── examples/                     ← 9 VSP samples (original)
-    ├── vsp_spatial_planning/         ← 1,000-sample training set (Week 1, ours)
-    └── extracted/                    ← 10 extracted samples, ~4.8 GB (Week 1, ours)
-        ├── metadata.json
-        └── tensors/sample_*/
-            ├── latent_to_visual_attn.pt
-            ├── hidden_states.pt
-            ├── embeddings.pt
-            └── logits.pt
+│   ├── main.py                           ← Training entry point
+│   ├── task.py                           ← Dataset preprocessing
+│   ├── trainer.py                        ← Training loop wrapper
+│   ├── utils.py                          ← Token manipulation, batch processing
+│   └── test.py                           ← Debug utilities
 ```
 
-**Original codebase:** [UMass-Embodied-AGI/Mirage](https://github.com/UMass-Embodied-AGI/Mirage)  
-**additions:** `hooks.py`, `extract.py`, `data_reference/`, `report/`, and all extracted data.
+**Original codebase:** [UMass-Embodied-AGI/Mirage](https://github.com/UMass-Embodied-AGI/Mirage) — training code, `main.py`, `task.py`, `trainer.py`, `utils.py`, `test.py`.  
+**Our additions (Week 1):** `hooks.py`, `extract.py`, `data_reference/`, and this README.
+
+### Not in this repo
+
+Full extracted data lives on Snellius due to size (~4.8 GB for 10 samples). Logits alone are
+160–260 MB each. See [Getting the Data](#getting-the-data) below.
+
+```
+/home/scur0259/mirage/data/extracted/
+├── metadata.json                         ← 10-sample index
+└── tensors/sample_*/
+    ├── latent_to_visual_attn.pt          ← Same format as data_reference/
+    ├── hidden_states.pt
+    ├── embeddings.pt
+    └── logits.pt                         ← [1, ≤200, 151668] — too large for GitHub
+```
 
 ---
 
