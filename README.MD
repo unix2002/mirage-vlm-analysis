@@ -65,8 +65,7 @@ three research questions:
 ```
 
 **Original codebase:** [UMass-Embodied-AGI/Mirage](https://github.com/UMass-Embodied-AGI/Mirage)  
-**Our additions:** `hooks.py`, `extract.py`, `data_reference/`, `report/`, and all extracted data.
-```
+**additions:** `hooks.py`, `extract.py`, `data_reference/`, `report/`, and all extracted data.
 
 ---
 
