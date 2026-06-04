@@ -258,4 +258,3 @@ scp -r scur0259@snellius.surf.nl:/home/scur0259/mirage/data/extracted/tensors/sa
 | Ablation sandbox | Re-run model with masked tokens | No storage needed |
 
 Role A will add `logits_topk.pt` early Week 2. Role D should mock the answer display until then.
-```
