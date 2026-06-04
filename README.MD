@@ -6,15 +6,16 @@ Interactive visual analytics for inspecting latent reasoning in vision-language 
 **Compute:** Snellius (`scur0259@snellius.surf.nl`)  
 **Data root:** `/home/scur0259/mirage/data/extracted/` (50 samples, 7.9 GB)  
 **Model:** Qwen2.5-VL-7B-Instruct + latent tokens (= Mirage)  
-**Paper:** [Machine Mental Imagery (arXiv 2506.17218)](https://arxiv.org/abs/2506.17218)
+**Base codebase:** [UMass-Embodied-AGI/Mirage](https://github.com/UMass-Embodied-AGI/Mirage)
 
 ---
 
 ## Project Overview
 
-Vision-language models increasingly solve complex VQA through **latent visual reasoning** —
-generating continuous "visual thoughts" rather than compressing everything into discrete text.
-These latent tokens are opaque: they cannot be read, inspected, or debugged.
+The Mirage model (Yang et al., 2025) extends Qwen2.5-VL with **latent visual tokens** —
+compressed image features scattered between the user's question and the assistant's answer.
+These tokens carry visual reasoning information but are opaque: they cannot be read, inspected,
+or debugged directly.
 
 This project builds an interactive Dash dashboard that makes latent reasoning tangible across
 four research questions:
@@ -41,7 +42,7 @@ four research questions:
 │   └── embeddings.pt
 ├── src/
 │   ├── hooks.py                          ← MirageAnalyzer class (forward hooks)
-│   ├── extract.py                        ← Batch extraction pipeline (samples → .pt + JSON)
+│   ├── extract.py                        ← Batch extraction pipeline
 │   ├── main.py                           ← Training entry point (original Mirage)
 │   ├── task.py                           ← Dataset preprocessing (original)
 │   ├── trainer.py                        ← Training loop wrapper (original)
@@ -51,16 +52,15 @@ four research questions:
     └── session_report.tex                ← Week 1 session log (LaTeX)
 ```
 
-**Original codebase:** [UMass-Embodied-AGI/Mirage](https://github.com/UMass-Embodied-AGI/Mirage)  
-**Our additions:** `hooks.py`, `extract.py`, `data_reference/`, this README, `SCHEDULE.md`.
+**Our additions (Week 1):** `hooks.py`, `extract.py`, `data_reference/`, this README, `SCHEDULE.md`.
 
 ---
 
 ## Dataset: VSP (Visual Spatial Planning)
 
-The Mirage model's latent token mechanism **requires paired output images** that GQA does not
-provide. We use **VSP** — maze-based spatial reasoning with step-by-step board-state images.
-This is the dataset Mirage was designed and trained for.
+The Mirage model's latent token mechanism **requires paired output images** — something GQA
+does not provide. We use **VSP** — maze-based spatial reasoning with step-by-step board-state
+images. This is the dataset Mirage was designed and trained for.
 
 | Split | Samples | Location (Snellius) |
 |-------|---------|---------------------|
@@ -86,9 +86,9 @@ One JSON object per line:
 ### Data Preparation Fix
 
 The original `train_direct.jsonl` has bare `\boxed{DOWN}` without `<output_image>` or
-`<think>` tags. Mirage's `place_output_image()` utility expects `<think>...</think>` wrapping.
-Missing tags cause the processor to miscount image placeholders (3 image_pads for 2 images →
-`IndexError` in `image_grid_thw`).
+`<think>` tags. Mirage's `place_output_image()` utility expects `<think>...</think>` wrapping
+to correctly count image placeholders. Missing tags cause an `IndexError` in the processor's
+`image_grid_thw` indexing (3 image_pads for 2 images → crash).
 
 **Fix:** `<think></think><output_image>` prepended before `\boxed{...}` in all 1,000 samples.
 Output: `train_direct_with_oi.jsonl`.
@@ -122,7 +122,7 @@ determinism is critical for ablation (RQ3): the latent region can be reliably ta
     ├── sample_000/             ← 4 .pt files, ~158 MB
     ├── sample_001/
     ├── ...
-    └── sample_053/             ← (46–49 skipped: square images)
+    └── sample_053/             ← (indices 46–49 skipped: square images incompatible with processor)
 ```
 
 **Access for teammates:**
@@ -137,7 +137,7 @@ cp -r /home/scur0259/mirage/data/extracted ~/mirage_data/
 | Sequence length | 374 | 537 | 475 |
 | Latent tokens | 6 | 6 | 6.0 |
 | Visual patches | 49 | 196 | 145 |
-| **Total** | | | **7.9 GB** (~158 MB/sample) |
+| **Total size** | | | **7.9 GB** (~158 MB/sample) |
 
 ### Size Breakdown
 
@@ -162,7 +162,7 @@ The logits dominate due to the 151,668-token vocabulary. **Week 2 plan:** top-*k
 
 ---
 
-## Data Handoff Specification
+## Data Handoff
 
 | Recipient | File(s) | Contents |
 |-----------|---------|----------|
@@ -184,7 +184,8 @@ The logits dominate due to the 151,668-token vocabulary. **Week 2 plan:** top-*k
 | Data preparation (1,000 VSP samples fixed) | ✅ Done |
 | Extraction at scale (50 samples, 7.9 GB) | ✅ Done |
 | GitHub repo with code + reference data | ✅ Done |
-| **Friday milestone:** ≥10 samples with all tensor types | ✅ Met (50 samples) |
+
+---
 
 ## Schedule (Weeks 2–4)
 
@@ -237,7 +238,8 @@ scp -r scur0259@snellius.surf.nl:/home/scur0259/mirage/data/extracted/tensors/sa
 
 **Quick start (Python):**
 ```python
-import torch, numpy as np
+import torch
+import numpy as np
 
 # Load attention submatrix for one layer
 attn = torch.load("latent_to_visual_attn.pt", map_location="cpu", weights_only=True)
@@ -245,25 +247,9 @@ layer_14 = attn[14]                        # [6, N_visual] — 6 latent tokens �
 grid = int(np.sqrt(layer_14.shape[1]))     # e.g. 14 for 196 patches
 heatmap = layer_14[0].numpy().reshape(grid, grid)  # first latent token's attention
 
-# Overlay on input image with matplotlib
+# Overlay on input image
 import matplotlib.pyplot as plt
 plt.imshow(heatmap, cmap='hot', interpolation='nearest')
 plt.colorbar()
 plt.show()
-```
-
----
-
-## Citation
-
-```bibtex
-@article{yang2025machine,
-  title={Machine Mental Imagery: Empower Multimodal Reasoning with Latent Visual Tokens},
-  author={Zeyuan Yang and Xueyang Yu and Delin Chen and Maohao Shen and Chuang Gan},
-  year={2025},
-  eprint={2506.17218},
-  archivePrefix={arXiv},
-  primaryClass={cs.CV},
-  url={https://arxiv.org/abs/2506.17218},
-}
 ```
