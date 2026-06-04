@@ -141,30 +141,6 @@ Answer-region vocabulary distributions (region after the last latent token).
 **Size:** 160–260 MB per sample. Week 2 plan: add `logits_topk.pt` with top-100 indices + values
 per position (~1 MB/sample).
 
----
-
-## Week 1 Status
-
-| Role | Status |
-|------|--------|
-| A — Pipeline & RQ3 | ✅ Hooks working, 10 samples extracted (~4.8 GB), ready for scaling + ablation |
-| B — RQ1 & Phase 4 | Data available (see handoff below) |
-| C — RQ2 & Silenced Lat. | Data available (see handoff below) |
-| D — Dash & RQ4 | Metadata + one reference sample available (see handoff below) |
-
-**Friday checkpoint met:** A demonstrated extraction on 10 samples.  
-
----
-
-## Role Handoff — Week 1 → Week 2
-
-### Role B — RQ1 Heatmaps + Phase 4
-
-**Week 1 deliverable:** Heatmap generation script (numpy + matplotlib → PNG).
-
-Your data: `latent_to_visual_attn.pt` — 28 layers, each `[N_latent, N_visual]` float16.
-Reshape to 2D via `sqrt(N_visual)`. Token positions in `metadata.json`. Images at
-the relative paths listed there.
 
 **Getting started:**
 ```python
@@ -175,45 +151,6 @@ grid = int(np.sqrt(layer_14.shape[1]))     # 14
 heatmap = layer_14[0].numpy().reshape(grid, grid)
 # Overlay on image via matplotlib
 ```
-
-### Role C — RQ2 Probing + Silenced Latents
-
-**Week 1 deliverable:** Probe training + evaluation script on dummy embeddings.
-
-Your data: `hidden_states.pt` (layers 25–27, each `[seq_len, 3584]`) and `embeddings.pt`
-(`[seq_len, 3584]`). Latent token positions in `metadata.json → token_positions.latent`.
-Answer labels in `text_output_short` (e.g. `\boxed{A}`, `\boxed{RIGHT, DOWN}`).
-
-**Getting started:**
-```python
-import torch
-from sklearn.linear_model import LogisticRegression
-
-hidden = torch.load("data_reference/hidden_states.pt", map_location="cpu", weights_only=True)
-h = hidden["layer_27"][0]                              # [771, 3584]
-latent_vecs = h[[587, 588, 589, 590, 591, 592]]        # from metadata.json
-labels = ["A"] * 6                                      # from text_output_short
-probe = LogisticRegression(max_iter=1000).fit(latent_vecs.numpy(), labels)
-```
-
-### Role D — Dash Frontend & RQ4
-
-**Week 1 deliverable:** Running Dash app with mock data and working navigation callbacks.
-
-Use `metadata.json` as your schema. Build:
-- UMAP scatterplot placeholder (Level 1)
-- Image pane + token strip + detail panel (Levels 2–3)
-- Working click-to-select callbacks
-
-Mock tensor shapes:
-- Attention: `{layer: [6, 49–196]}`
-- Hidden states: `{layer_25: [1, ~700, 3584]}`
-- Logits: `[1, ~200, 151668]` → Week 2 will provide top-100 compressed version
-
-The reference `.pt` files in `data_reference/` let you validate your loading code against
-real data.
-
----
 
 ## Environment
 
@@ -246,15 +183,3 @@ cp -r /home/scur0259/mirage/data/extracted ~/mirage_data/
 scp scur0259@snellius.surf.nl:/home/scur0259/mirage/data/extracted/metadata.json .
 scp -r scur0259@snellius.surf.nl:/home/scur0259/mirage/data/extracted/tensors/sample_000/latent_to_visual_attn.pt .
 ```
-
----
-
-## Logits Top-K Plan (Week 2)
-
-| Use case | Needs | Storage |
-|----------|-------|---------|
-| RQ3 KL divergence | Full distribution | Keep `.pt` or re-run model |
-| Dash answer display | Top-100 tokens per position | `logits_topk.pt`: `{indices: [ans_len, 100], values: [ans_len, 100]}` |
-| Ablation sandbox | Re-run model with masked tokens | No storage needed |
-
-Role A will add `logits_topk.pt` early Week 2. Role D should mock the answer display until then.
