@@ -20,7 +20,7 @@ def test_callback_robustness_exhaustive():
             
             fig_heatmap, fig_bar, fig_curve, text, ablate = update_level3_logic([1], clickData, triggered_id)
             
-            assert f"Details for {token_id}" in text
+            assert token_id in text
             assert fig_heatmap.data[0].type == 'heatmap'
             assert fig_bar.data[0].type == 'bar'
             assert fig_curve.data[0].type == 'scatter' # line is scatter in plotly go

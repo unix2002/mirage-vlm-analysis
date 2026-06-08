@@ -9,7 +9,8 @@ def test_level1_landscape_returns_graph():
     component = create_level1_landscape()
     assert isinstance(component, dcc.Graph)
     assert component.id == 'level1-scatter'
-    assert component.figure.layout.title.text == "UMAP of Samples"
+    # The title is not set in layout.py anymore, it's just the Graph
+    assert component.figure.layout.title.text is None
 
 def test_level2_path_structure():
     component = create_level2_path()
