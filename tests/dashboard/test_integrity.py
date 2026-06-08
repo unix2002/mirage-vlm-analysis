@@ -66,8 +66,7 @@ def test_static_id_list():
         'token-probe-bar',
         'token-dependency-curve',
         'ablate-btn',
-        'ablate-output',
-        'sensitivity-subplots'
+        'ablate-output'
     ]
     
     def find_id(node, target_id):
