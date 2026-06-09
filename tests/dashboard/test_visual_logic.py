@@ -14,7 +14,10 @@ def test_rq1_visual_heatmap_data():
     z_data = fig_heatmap.data[0].z
     assert np.max(z_data) <= 1.0
     assert np.min(z_data) >= 0.0
-    assert np.array(z_data).shape == (14, 14)
+    
+    # Grid size should match the data (dynamic)
+    expected_grid = len(sample['tokens'][0]['spatial_focus'])
+    assert np.array(z_data).shape == (expected_grid, expected_grid)
 
 def test_rq2_visual_bar_logic():
     """Verify RQ2 probe accuracy bar chart logic."""
