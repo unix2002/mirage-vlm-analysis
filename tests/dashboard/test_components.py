@@ -4,13 +4,14 @@ from dashboard.components.level2_path import create_level2_path
 from dashboard.components.level3_detail import create_level3_detail
 from dash import dcc, html
 import dash_bootstrap_components as dbc
+import plotly.graph_objects as go
+from dashboard.mock_data import MOCK_DATA
 
 def test_level1_landscape_returns_graph():
-    component = create_level1_landscape()
-    assert isinstance(component, dcc.Graph)
-    assert component.id == 'level1-scatter'
-    # The title is not set in layout.py anymore, it's just the Graph
-    assert component.figure.layout.title.text is None
+    component = create_level1_landscape(MOCK_DATA)
+    # The component is now returning a go.Figure instead of dcc.Graph directly
+    assert isinstance(component, go.Figure)
+    assert component.layout.title.text == "Fig 1. Latent Reasoning Landscape"
 
 def test_level2_path_structure():
     component = create_level2_path()

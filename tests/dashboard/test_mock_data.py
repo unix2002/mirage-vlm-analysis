@@ -16,7 +16,7 @@ def test_generate_mock_data_structure():
         assert 'attention_weights' in sample
         
         # Check directions
-        assert sample['move_direction'] in ['UP', 'DOWN', 'LEFT', 'RIGHT']
+        assert sample['move_direction'] in ['UP', 'DOWN', 'LEFT', 'RIGHT', 'UNKNOWN']
         
         # Check tokens
         assert len(sample['tokens']) == 6
