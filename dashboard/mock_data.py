@@ -1,5 +1,5 @@
 import numpy as np
-
+from .data_loader import REAL_DATA
 
 def generate_mock_data(n_samples=50):
     np.random.seed(42)
@@ -48,5 +48,8 @@ def generate_mock_data(n_samples=50):
 
     return samples
 
-
-MOCK_DATA = generate_mock_data()
+# Use real data if available, otherwise fallback
+if REAL_DATA:
+    MOCK_DATA = REAL_DATA
+else:
+    MOCK_DATA = generate_mock_data()
