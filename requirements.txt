@@ -6,3 +6,9 @@ qwen_vl_utils
 mathruler
 pylatexenc
 Pillow
+dash
+dash-bootstrap-components
+plotly
+pandas
+numpy
+pytest
