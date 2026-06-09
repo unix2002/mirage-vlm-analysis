@@ -9,7 +9,13 @@ transformers/
 venv/
 __pycache__/
 *.pyc
+*.py[cod]
+*$py.class
 *.egg-info/
+
+# Environment
+.env
+.pytest_cache/
 
 # Data (except aggregate JSONs)
 data/extracted/
