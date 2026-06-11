@@ -2,13 +2,22 @@ from dash.dependencies import Input, Output, State, ALL
 import dash
 import plotly.express as px
 import plotly.graph_objects as go
-import numpy as np
 import json
 from ..mock_data import MOCK_DATA
 
 
+def _extract_active_click(token_clicks):
+    if not token_clicks:
+        return None
+    for item in token_clicks:
+        if item:
+            return item
+    return None
+
+
 def update_level3_logic(token_clicks, clickData, triggered_id_full):
-    if not any(token_clicks) or not clickData:
+    active_click = _extract_active_click(token_clicks)
+    if not active_click or not clickData:
         return go.Figure(), go.Figure(), go.Figure(), "Level 3: Token Details", ""
 
     # Strip property if present (e.g. .n_clicks)
@@ -31,8 +40,9 @@ def update_level3_logic(token_clicks, clickData, triggered_id_full):
 
     # RQ2: Information Content Probe Bar
     dirs = ['UP', 'DOWN', 'LEFT', 'RIGHT']
-    accs = [token['probe_accuracy'] if d == sample['move_direction']
-            else np.random.uniform(0.1, 0.4) for d in dirs]
+    base = max(0.0, min(1.0, float(token['probe_accuracy'])))
+    off_value = max(0.0, min(1.0, base * 0.35))
+    accs = [base if d == sample['move_direction'] else off_value for d in dirs]
     fig_bar = px.bar(x=dirs, y=accs)
     fig_bar.update_layout(
         margin=dict(l=5, r=5, t=20, b=5),
@@ -43,7 +53,8 @@ def update_level3_logic(token_clicks, clickData, triggered_id_full):
 
     # RQ3: Causal Dependence Curve
     steps = list(range(10))
-    kls = [token['kl_divergence'] * np.exp(-0.2 * s) for s in steps]
+    decay = 0.82
+    kls = [token['kl_divergence'] * (decay ** s) for s in steps]
     fig_curve = px.line(x=steps, y=kls)
     fig_curve.update_layout(
         margin=dict(l=5, r=5, t=20, b=5),
@@ -63,12 +74,12 @@ def ablate_token_logic(n_clicks):
 
 def register_level3_callbacks(app):
     @app.callback(
-        [Output('token-heatmap', 'figure'),
-         Output('token-probe-bar', 'figure'),
-         Output('token-dependency-curve', 'figure'),
+        [Output('token-detail-heatmap', 'figure'),
+         Output('token-detail-probe-bar', 'figure'),
+         Output('token-detail-dependency-curve', 'figure'),
          Output('level3-instructions', 'children'),
          Output('ablate-output', 'children')],
-        [Input({'type': 'token-glyph', 'index': ALL}, 'n_clicks'),
+        [Input({'type': 'token-heatmap', 'index': ALL}, 'clickData'),
          Input('ablate-btn', 'n_clicks')],
         [State('level1-scatter', 'clickData')]
     )
@@ -83,4 +94,18 @@ def register_level3_callbacks(app):
         if 'ablate-btn' in triggered_id_full:
             return dash.no_update, dash.no_update, dash.no_update, dash.no_update, ablate_token_logic(ablate_clicks)
 
-        return update_level3_logic(token_clicks, clickData, triggered_id_full)
+        active_click = _extract_active_click(token_clicks)
+        if not active_click:
+            return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+
+        token_index = None
+        if 'token-heatmap' in triggered_id_full:
+            try:
+                token_index = json.loads(triggered_id_full.split('.')[0])['index']
+            except Exception:
+                token_index = None
+
+        if token_index is None:
+            return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+
+        return update_level3_logic(active_click, clickData, json.dumps({'index': token_index}))

@@ -5,11 +5,11 @@ import dash_bootstrap_components as dbc
 def create_level3_detail():
     return html.Div([
         dbc.Row([
-            dbc.Col(dcc.Graph(id='token-heatmap',
+            dbc.Col(dcc.Graph(id='token-detail-heatmap',
                     style={'height': '30vh'}), width=4),
-            dbc.Col(dcc.Graph(id='token-probe-bar',
+            dbc.Col(dcc.Graph(id='token-detail-probe-bar',
                     style={'height': '30vh'}), width=4),
-            dbc.Col(dcc.Graph(id='token-dependency-curve',
+            dbc.Col(dcc.Graph(id='token-detail-dependency-curve',
                     style={'height': '30vh'}), width=4),
         ], className="g-0"),
         dbc.Row([

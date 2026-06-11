@@ -7,6 +7,7 @@ import traceback
 import warnings
 import re
 from sklearn.decomposition import PCA
+from sklearn.metrics.pairwise import cosine_similarity
 import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -50,6 +51,7 @@ class RealDataLoader:
     def _initialize_paths(self, override_dir=None):
         possible_dirs = [
             override_dir,
+            'real_data/mirage_extracted',    # Local real dataset
             '../mirage_data/extracted',      # From remco/
             '../../mirage_data/extracted',   # From remco/mirage-vlm-analysis/
             '/gpfs/home1/scur0241/mirage_data/extracted', # Absolute path
@@ -83,7 +85,7 @@ class RealDataLoader:
         if not self.metadata:
             return []
 
-        samples_to_process = self.metadata[:50]
+        samples_to_process = self.metadata[:1000]
         processed = []
         all_hidden_states = []
         self.valid_indices = []
@@ -118,6 +120,7 @@ class RealDataLoader:
                         logging.debug(f"Failed to load attn for {sample_id}: {e}")
 
                 tokens = []
+                token_vectors = []
                 for t in range(num_latent):
                     spatial_focus = None
                     if real_attn is not None:
@@ -128,15 +131,28 @@ class RealDataLoader:
                             if side * side == n_vis:
                                 spatial_focus = token_attn.reshape(side, side).tolist()
                         except: pass
-                    
+
                     if spatial_focus is None:
-                        spatial_focus = np.random.rand(11, 11).tolist()
+                        spatial_focus = np.zeros((11, 11), dtype=np.float32).tolist()
+
+                    focus_arr = np.asarray(spatial_focus, dtype=np.float32)
+                    flat_focus = focus_arr.reshape(-1)
+                    total = float(flat_focus.sum())
+                    if total > 0:
+                        prob = flat_focus / total
+                    else:
+                        prob = np.full_like(flat_focus, 1.0 / len(flat_focus))
+                    uniform = np.full_like(prob, 1.0 / len(prob))
+                    probe_accuracy = float(np.clip(prob.max() * len(prob), 0.0, 1.0))
+                    kl_divergence = float(np.sum(prob * np.log((prob + 1e-8) / uniform)))
+
+                    token_vectors.append(flat_focus)
 
                     tokens.append({
                         'token_id': f"T{t}",
                         'spatial_focus': spatial_focus,
-                        'probe_accuracy': float(0.5 + 0.4 * np.random.rand()),
-                        'kl_divergence': float(0.1 + 1.5 * np.random.rand())
+                        'probe_accuracy': probe_accuracy,
+                        'kl_divergence': kl_divergence
                     })
 
                 # 2. Load Hidden States
@@ -166,6 +182,11 @@ class RealDataLoader:
                     except Exception as e:
                         logging.debug(f"Error loading HS for {sample_id}: {e}")
 
+                if token_vectors:
+                    token_matrix = cosine_similarity(np.asarray(token_vectors, dtype=np.float32))
+                else:
+                    token_matrix = np.zeros((num_latent, num_latent), dtype=np.float32)
+
                 processed.append({
                     'sample_id': sample_id,
                     'correctness': correctness,
@@ -176,7 +197,7 @@ class RealDataLoader:
                     'umap_x': 0.0,
                     'umap_y': 0.0,
                     'tokens': tokens,
-                    'attention_weights': np.random.rand(num_latent, num_latent).tolist(),
+                    'attention_weights': token_matrix.tolist(),
                     'metadata': meta
                 })
             except Exception as e:

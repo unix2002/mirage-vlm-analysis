@@ -1,7 +1,7 @@
 import dash_bootstrap_components as dbc
 from dash import html, dcc
 from .components.level1_landscape import create_level1_landscape
-from .components.level2_path import create_level2_path
+from .components.level2_path import create_level2_path, create_level2_bottom
 from .components.level3_detail import create_level3_detail
 from .mock_data import MOCK_DATA
 
@@ -88,7 +88,10 @@ def create_main_content():
         dbc.Card([
             dbc.CardHeader("Level 2: Reasoning Path Analysis",
                            className="py-1 small font-weight-bold"),
-            dbc.CardBody(create_level2_path(), className="p-1")
+            dbc.CardBody(html.Div([
+                create_level2_path(),
+                create_level2_bottom(),
+            ], style={'height': '100%'}), className="p-1")
         ], style={'height': '43vh'}, className="mb-2"),
 
         # Level 3: Token Specifics
