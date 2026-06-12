@@ -1,5 +1,6 @@
 import base64
 import json
+import re
 import tarfile
 from pathlib import Path
 from functools import lru_cache
@@ -13,6 +14,28 @@ from ..mock_data import MOCK_DATA
 
 
 ABLATED_DATA = json.loads(Path('real_data/ablation_results.json').read_text())
+
+
+def _load_truth_index():
+    truth_path = Path('real_data/train_direct.jsonl')
+    if not truth_path.exists():
+        return {}
+
+    index = {}
+    for line in truth_path.read_text().splitlines():
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        image_input = row.get('image_input')
+        if image_input:
+            index[image_input] = row
+    return index
+
+
+GROUND_TRUTH_INDEX = _load_truth_index()
 
 
 def _format_metric(value, digits=3):
@@ -175,12 +198,20 @@ def _token_grid(sample):
 def _outputs_panel(sample):
     meta = sample.get('metadata', {})
     model_output = meta.get('text_output_short') or meta.get('text_output') or 'N/A'
-    true_output = meta.get('true_output') or meta.get('ground_truth') or meta.get('text_output_short') or 'N/A'
+    truth_row = GROUND_TRUTH_INDEX.get(meta.get('image_input'))
+    true_output = (truth_row or {}).get('text_output') or meta.get('true_output') or meta.get('ground_truth') or 'N/A'
+
+    def _clean_output(text):
+        if not text:
+            return 'N/A'
+        text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
+        text = text.replace('<output_image>', '')
+        return text.replace('\\boxed{', '').replace('}', '').strip()
 
     def _card(title, body):
         return dbc.Card([
             dbc.CardHeader(title, className='py-1 small'),
-            dbc.CardBody(html.Pre(body, className='small mb-0', style={'whiteSpace': 'pre-wrap', 'maxHeight': '4vh', 'overflowY': 'auto'}), className='py-1')
+            dbc.CardBody(html.Pre(_clean_output(body), className='small mb-0', style={'whiteSpace': 'pre-wrap', 'maxHeight': '4vh', 'overflowY': 'auto'}), className='py-1')
         ], className='h-100')
 
     return dbc.Row([

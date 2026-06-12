@@ -34,8 +34,10 @@ def update_level3_logic(token_clicks, clickData, triggered_id_full):
         token['spatial_focus'], color_continuous_scale='Viridis')
     fig_heatmap.update_layout(
         margin=dict(l=5, r=5, t=20, b=5),
-        title=dict(text=f"RQ1: Focus {token_id}", font=dict(size=10)),
-        coloraxis_showscale=False
+        title=dict(text=f"RQ1: Spatial Focus Heatmap (Token {token_id})", font=dict(size=10)),
+        coloraxis_showscale=True,
+        xaxis=dict(title="Column"),
+        yaxis=dict(title="Row")
     )
 
     # RQ2: Information Content Probe Bar
@@ -43,10 +45,10 @@ def update_level3_logic(token_clicks, clickData, triggered_id_full):
     base = max(0.0, min(1.0, float(token['probe_accuracy'])))
     off_value = max(0.0, min(1.0, base * 0.35))
     accs = [base if d == sample['move_direction'] else off_value for d in dirs]
-    fig_bar = px.bar(x=dirs, y=accs)
+    fig_bar = px.bar(x=dirs, y=accs, labels={'x': 'Direction', 'y': 'Probe Accuracy'})
     fig_bar.update_layout(
         margin=dict(l=5, r=5, t=20, b=5),
-        title=dict(text=f"RQ2: Info {token_id}", font=dict(size=10)),
+        title=dict(text=f"RQ2: Directional Probe Accuracy (Token {token_id})", font=dict(size=10)),
         yaxis=dict(range=[0, 1], tickfont=dict(size=8)),
         xaxis=dict(tickfont=dict(size=8))
     )
@@ -55,10 +57,10 @@ def update_level3_logic(token_clicks, clickData, triggered_id_full):
     steps = list(range(10))
     decay = 0.82
     kls = [token['kl_divergence'] * (decay ** s) for s in steps]
-    fig_curve = px.line(x=steps, y=kls)
+    fig_curve = px.line(x=steps, y=kls, labels={'x': 'Step', 'y': 'KL Divergence'})
     fig_curve.update_layout(
         margin=dict(l=5, r=5, t=20, b=5),
-        title=dict(text=f"RQ3: Causal {token_id}", font=dict(size=10)),
+        title=dict(text=f"RQ3: Causal KL Dependence (Token {token_id})", font=dict(size=10)),
         xaxis=dict(tickfont=dict(size=8)),
         yaxis=dict(tickfont=dict(size=8))
     )
