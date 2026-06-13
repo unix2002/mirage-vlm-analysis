@@ -9,6 +9,7 @@ from dash.dependencies import Input, Output
 import dash
 from dash import dcc, html
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import dash_bootstrap_components as dbc
 from ..mock_data import MOCK_DATA
 
@@ -99,30 +100,45 @@ def _read_tar_member(archive_path, member_name):
 
 def _ablation_summary(sample_id):
     sample_key = str(sample_id)
-    rows = []
     per_sample = ABLATED_DATA.get('per_sample', {})
-    for mode in ['zero_out', 'shuffle', 'noise', 'random', 'visual_zero']:
-        sample_stats = per_sample.get(mode, {}).get(sample_key)
-        if not sample_stats:
-            continue
-        rows.append(
-            html.Tr([
-                html.Td(mode),
-                html.Td(_format_metric(sample_stats.get('kl_mean'))),
-                html.Td(_format_metric(sample_stats.get('top1_agreement'))),
-                html.Td(_format_metric(sample_stats.get('gt_acc_ablated'))),
-            ])
-        )
 
-    if not rows:
+    modes = ['zero_out', 'shuffle', 'noise', 'random', 'visual_zero']
+    kl_means, top1s, accs = [], [], []
+    present_modes = []
+    for mode in modes:
+        stats = per_sample.get(mode, {}).get(sample_key)
+        if stats is None:
+            continue
+        present_modes.append(mode)
+        kl_means.append(stats.get('kl_mean', 0))
+        top1s.append(stats.get('top1_agreement', 0))
+        accs.append(stats.get('gt_acc_ablated', 0))
+
+    if not present_modes:
         return html.Div('No ablation results for this sample.', className='small text-muted p-2')
 
-    return dbc.Table([
-        html.Thead(html.Tr([
-            html.Th('mode'), html.Th('kl mean'), html.Th('top1'), html.Th('acc ablated')
-        ])),
-        html.Tbody(rows)
-    ], bordered=True, striped=True, hover=True, size='sm', className='mb-0 small', style={'fontSize': '0.72rem'})
+    fig = make_subplots(
+        rows=3, cols=1,
+        shared_xaxes=True,
+        subplot_titles=('KL Mean', 'Top1 Agreement', 'Acc Ablated'),
+        vertical_spacing=0.06
+    )
+    fig.add_trace(go.Bar(x=present_modes, y=kl_means, showlegend=False), row=1, col=1)
+    fig.add_trace(go.Bar(x=present_modes, y=top1s, showlegend=False), row=2, col=1)
+    fig.add_trace(go.Bar(x=present_modes, y=accs, showlegend=False), row=3, col=1)
+    fig.update_layout(
+        margin=dict(l=5, r=5, t=20, b=5),
+        font=dict(size=7),
+        hovermode=False
+    )
+    fig.update_annotations(font_size=6)
+    fig.update_xaxes(tickfont=dict(size=6), row=3, col=1)
+    for r in (1, 2):
+        fig.update_xaxes(visible=False, row=r, col=1)
+    for r in (1, 2, 3):
+        fig.update_yaxes(tickfont=dict(size=6), row=r, col=1)
+
+    return dcc.Graph(figure=fig, config={'displayModeBar': False}, style={'height': '100%', 'width': '100%'})
 
 
 def _maze_view(sample):
