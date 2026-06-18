@@ -7,7 +7,7 @@ import traceback
 import warnings
 import re
 from sklearn.decomposition import PCA
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
 import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -29,11 +29,12 @@ class RealDataLoader:
         self.data_dir = None
         self.metadata = []
         self.processed_samples = []
-        
+        self.maze_dict = {}
+
         # Caching for re-projection
         self.X_raw = None # Raw cached hidden states (float32)
         self.valid_indices = []
-        
+
         try:
             self._initialize_paths(data_dir)
             if self.data_dir:
@@ -48,16 +49,45 @@ class RealDataLoader:
             logging.error(f"Critical error during data initialization: {str(e)}")
             logging.debug(traceback.format_exc())
 
+    def _load_maze_dict(self, data_dir):
+        # Try to find train_direct.jsonl
+        base_dir = os.path.dirname(data_dir) if data_dir.endswith('extracted') else data_dir
+        jsonl_path = os.path.join(base_dir, 'vsp_spatial_planning', 'train_direct.jsonl')
+        
+        if not os.path.exists(jsonl_path):
+            jsonl_path = '/gpfs/home1/scur0241/mirage_data/vsp_spatial_planning/train_direct.jsonl'
+            
+        if os.path.exists(jsonl_path):
+            try:
+                with open(jsonl_path, 'r') as f:
+                    for line in f:
+                        if not line.strip(): continue
+                        item = json.loads(line)
+                        if 'image_input' in item:
+                            img_path = item['image_input']
+                            match = re.search(r'level_(\d+)/(\d+)/', img_path)
+                            if match:
+                                level = int(match.group(1))
+                                map_id = int(match.group(2))
+                                self.maze_dict[(level, map_id)] = {
+                                    'map_desc': item.get('map_desc'),
+                                    'full_path': item.get('text_output')
+                                }
+                logging.info(f"Loaded {len(self.maze_dict)} maze descriptions from {jsonl_path}")
+            except Exception as e:
+                logging.warning(f"Failed to load maze dictionary: {e}")
+
     def _initialize_paths(self, override_dir=None):
         possible_dirs = [
             override_dir,
+            '/gpfs/home1/scur0241/mirage_data', # Central root data directory
             'data/',    # Local real dataset
             '../mirage_data/extracted',      # From remco/
             '../../mirage_data/extracted',   # From remco/mirage-vlm-analysis/
-            '/gpfs/home1/scur0241/mirage_data/extracted', # Absolute path
+            '/gpfs/home1/scur0241/mirage_data/extracted', # Absolute path fallback
             'data/reference'                 # Local fallback
         ]
-        
+
         for d in possible_dirs:
             if d is None: continue
             meta_path = os.path.join(d, 'metadata.json')
@@ -65,6 +95,7 @@ class RealDataLoader:
                 self.data_dir = d
                 with open(meta_path, 'r') as f:
                     self.metadata = json.load(f)
+                self._load_maze_dict(d)
                 return
 
     def _extract_move_direction(self, text):
@@ -99,7 +130,16 @@ class RealDataLoader:
                 sample_id = f"sample_{raw_sid:03d}"
                 move_dir = self._extract_move_direction(meta.get('text_output_short', ''))
                 correctness = move_dir != "UNKNOWN"
-                level_id = self._extract_level(meta.get('image_input', ''))
+                
+                image_input = meta.get('image_input', '')
+                level_id = self._extract_level(image_input)
+                
+                # Extract map_id
+                map_id = 0
+                map_match = re.search(r'level_\d+/(\d+)/', image_input)
+                if map_match:
+                    map_id = int(map_match.group(1))
+
                 seq_len = meta.get('seq_len', 0)
 
                 sample_tensor_dir = os.path.join(self.data_dir, 'tensors', sample_id)
@@ -108,6 +148,11 @@ class RealDataLoader:
 
                 latent_pos = meta.get('token_positions', {}).get('latent', [])
                 num_latent = len(latent_pos) if latent_pos else 6
+
+                # Fetch maze data
+                maze_info = self.maze_dict.get((level_id, map_id), {})
+                map_desc = maze_info.get('map_desc')
+                full_path = maze_info.get('full_path')
 
                 # 1. Load Attention
                 real_attn = None
@@ -168,7 +213,7 @@ class RealDataLoader:
                             hs_tensor = hs_data[last_layer]
                         else:
                             hs_tensor = hs_data
-                        
+
                         if hs_tensor.dim() == 3:
                             if latent_pos:
                                 last_latent_pos = latent_pos[-1]
@@ -180,7 +225,7 @@ class RealDataLoader:
                                 vec = hs_tensor[0, -1, :].to(torch.float32).numpy()
                         else:
                             vec = hs_tensor[-1, :].to(torch.float32).numpy()
-                        
+
                         all_hidden_states.append(vec)
                         self.valid_indices.append(i)
                     except Exception as e:
@@ -196,13 +241,16 @@ class RealDataLoader:
                     'correctness': correctness,
                     'move_direction': move_dir,
                     'level_id': level_id,
+                    'map_id': map_id,
                     'seq_len': seq_len,
                     'num_latent': num_latent,
                     'umap_x': 0.0,
                     'umap_y': 0.0,
                     'tokens': tokens,
                     'attention_weights': token_matrix.tolist(),
-                    'metadata': meta
+                    'metadata': meta,
+                    'map_desc': map_desc,
+                    'full_path': full_path
                 })
             except Exception as e:
                 logging.warning(f"Failed processing sample {i}: {e}")
@@ -210,11 +258,11 @@ class RealDataLoader:
         # Cache hidden states
         if len(all_hidden_states) > 5:
             self.X_raw = np.array(all_hidden_states)
-            
+
             # Pre-compute L2 Normalization (Standard for Cosine)
             norms = np.linalg.norm(self.X_raw, axis=1, keepdims=True)
             self.X_norm = self.X_raw / (norms + 1e-8)
-            
+
             # Pre-compute PCA Denoising to avoid latency during sweeps
             n_comp = min(32, self.X_norm.shape[0], self.X_norm.shape[1])
             pca = PCA(n_components=n_comp, random_state=42)
@@ -233,26 +281,41 @@ class RealDataLoader:
     def recompute_umap(self, n_neighbors, min_dist, use_pca=False, processed_override=None):
         """Dynamic re-projection using pre-computed features."""
         target_processed = processed_override if processed_override is not None else self.processed_samples
-        
+
         if self.X_raw is not None and HAS_UMAP:
             try:
                 # Select pre-computed input feature set
                 X_input = self.X_pca if use_pca else self.X_norm
-                
+
                 # Scientific Stabilizer: Cosine Metric
                 reducer = umap.UMAP(
-                    n_neighbors=int(n_neighbors), 
-                    min_dist=float(min_dist), 
+                    n_neighbors=int(n_neighbors),
+                    min_dist=float(min_dist),
                     metric='cosine',
-                    n_components=2, 
+                    n_components=2,
                     random_state=42
                 )
                 coords = reducer.fit_transform(X_input)
-                
+
+                # Vectorized uncertainty calculation (Average Local Error)
+                # 1. High-D distances (Cosine) normalized by max
+                dist_high = 1.0 - cosine_similarity(X_input)
+                max_high = np.max(dist_high)
+                if max_high > 0: dist_high /= max_high
+
+                # 2. 2D distances (Euclidean) normalized by max
+                dist_2d = euclidean_distances(coords)
+                max_2d = np.max(dist_2d)
+                if max_2d > 0: dist_2d /= max_2d
+
+                # 3. Average Local Error per point
+                uncertainty = np.mean(np.abs(dist_high - dist_2d), axis=1)
+
                 for idx, coord_idx in enumerate(self.valid_indices):
                     target_processed[coord_idx]['umap_x'] = float(coords[idx, 0])
                     target_processed[coord_idx]['umap_y'] = float(coords[idx, 1])
-                
+                    target_processed[coord_idx]['umap_uncertainty'] = float(uncertainty[idx])
+
                 return target_processed
             except Exception as e:
                 logging.error(f"Re-projection failed: {e}")

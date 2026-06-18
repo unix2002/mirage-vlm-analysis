@@ -70,7 +70,8 @@ def create_sidebar():
                             {'label': 'Correctness', 'value': 'correctness'},
                             {'label': 'Level ID', 'value': 'level_id'},
                             {'label': 'Sequence Length', 'value': 'seq_len'},
-                            {'label': 'Num Latent Tokens', 'value': 'num_latent'}
+                            {'label': 'Num Latent Tokens', 'value': 'num_latent'},
+                            {'label': 'Projection Error', 'value': 'umap_uncertainty'}
                         ],
                         value='avg_kl',
                         clearable=False,

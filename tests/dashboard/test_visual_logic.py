@@ -49,6 +49,7 @@ def test_rq3_visual_dependency_curve():
     # In mock logic, it's exponentially decaying: kls = [token['kl_divergence'] * np.exp(-0.2 * s) for s in steps]
     assert y_vals[0] > y_vals[-1]
 
+<<<<<<< HEAD
 def test_level2_ablation_tab():
     """Verify Level 2 now returns an ablation tab as the third element."""
     sample = MOCK_DATA[0]
@@ -62,3 +63,48 @@ def test_level2_ablation_tab():
     assert maze_view is not None
     # Ablation tab is an html.Div with the ablation landscape.
     assert ablation_tab is not None
+=======
+from dashboard.components.level1_landscape import create_level1_landscape
+
+def test_level1_static_glyphs_logic():
+    """Verify Phase 2 visual logic for Auras and Velocity glyphs."""
+    test_data = [
+        {
+            'sample_id': 's1', 'umap_x': 0, 'umap_y': 0, 
+            'umap_uncertainty': 0.1, 'correctness': True, 
+            'move_direction': 'UP', 'tokens': [{'kl_divergence': 0.5}, {'kl_divergence': 0.5}],
+            'level_id': 1, 'seq_len': 100, 'num_latent': 6
+        },
+        {
+            'sample_id': 's2', 'umap_x': 1, 'umap_y': 1, 
+            'umap_uncertainty': 0.9, 'correctness': False, 
+            'move_direction': 'DOWN', 'tokens': [{'kl_divergence': 0.1}, {'kl_divergence': 0.1}],
+            'level_id': 1, 'seq_len': 100, 'num_latent': 6
+        }
+    ]
+    
+    # We now default to zoom_level=1.0 where auras are hidden. 
+    # To test the auras trace being present we use zoom_level=5.0
+    fig = create_level1_landscape(test_data, color_metric='avg_kl', zoom_level=5.0)
+    
+    aura_trace = next((t for t in fig.data if t.name == "Uncertainty Aura"), None)
+    velocity_trace = next((t for t in fig.data if t.mode == 'markers' and t.name != "Uncertainty Aura" and t.name != 'Maze Hover' and 'Cluster' not in str(t.name)), None)
+    
+    assert aura_trace is not None
+    assert velocity_trace is not None
+    
+    # 1. Test Uncertainty Auras (size mapping: 10 + uncertainty * 60)
+    # s1 uncertainty 0.1 -> 10 + 6 = 16
+    # s2 uncertainty 0.9 -> 10 + 54 = 64
+    np.testing.assert_allclose(aura_trace.marker.size, [16, 64])
+    
+    # 2. Test Velocity Glyphs (size mapping: 8 + norm_kl * 14)
+    # s1 avg_kl=0.5 (max, norm=1) -> 8 + 14 = 22
+    # s2 avg_kl=0.1 (min, norm=0) -> 8 + 0 = 8
+    np.testing.assert_allclose(velocity_trace.marker.size, [22, 8], atol=1e-5)
+    
+    # 3. Test Correctness outline was removed and replaced with standard black outline
+    # Now it should be rgba(0,0,0,0.5)
+    assert velocity_trace.marker.line.color == 'rgba(0,0,0,0.5)'
+
+>>>>>>> 77f8af0 (Improve UMAP projections and dashboard visualization)
