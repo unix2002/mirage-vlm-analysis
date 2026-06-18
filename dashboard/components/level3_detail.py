@@ -8,10 +8,12 @@ def create_level3_detail():
         dcc.Store(id='ablation-state', data={'ablated_ranks': []}),
         dbc.Row([
             dbc.Col(dcc.Graph(id='token-detail-heatmap',
-                    style={'height': '30vh'}), width=4),
-            dbc.Col(dcc.Graph(id='token-detail-probe-bar',
-                    style={'height': '30vh'}), width=4),
+                    style={'height': '35vh'}), width=3),
+            dbc.Col(dcc.Graph(id='rq2-static-bar',
+                    style={'height': '35vh'}), width=3),
+            dbc.Col(dcc.Graph(id='rq2-dynamic-grid',
+                    style={'height': '35vh'}), width=3),
             dbc.Col(dcc.Graph(id='token-detail-dependency-curve',
-                    style={'height': '30vh'}), width=4),
+                    style={'height': '35vh'}), width=3),
         ], className="g-0"),
     ])

@@ -78,7 +78,8 @@ def test_static_id_list():
         'level2-token-grid',
         'level2-output-pane',
         'token-detail-heatmap',
-        'token-detail-probe-bar',
+        'rq2-static-bar',
+        'rq2-dynamic-grid',
         'token-detail-dependency-curve',
         'ablate-btn',
         'ablate-output'
