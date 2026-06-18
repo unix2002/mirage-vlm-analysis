@@ -361,13 +361,27 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
         # We want the mazes to stay relatively consistent in screen space and prevent clashing
         base_scale = 3.0 / max(1.0, zoom_level)
 
+        # Calculate y_stretch
+        y_stretch = 1.0
+        if viewport:
+            vp_w = viewport['x_max'] - viewport['x_min']
+            vp_h = viewport['y_max'] - viewport['y_min']
+            if vp_h > 0:
+                y_stretch = (vp_w / vp_h) / 0.74 # 0.74 is est. plot aspect ratio
+        else:
+            vp_w = df['umap_x'].max() - df['umap_x'].min()
+            vp_h = df['umap_y'].max() - df['umap_y'].min()
+            if vp_h > 0:
+                y_stretch = (vp_w / vp_h) / 0.74
+
         for _, row in df.iterrows():
             traces = generate_maze_traces(
                 row.get('map_desc'), 
                 row.get('full_path'), 
                 row['umap_x'], 
                 row['umap_y'], 
-                scale=base_scale
+                scale=base_scale,
+                y_stretch=y_stretch
             )
             all_grid_x.extend(traces['grid_x'])
             all_grid_y.extend(traces['grid_y'])

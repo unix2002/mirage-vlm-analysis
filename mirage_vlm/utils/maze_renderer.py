@@ -1,6 +1,6 @@
 import numpy as np
 
-def generate_maze_traces(map_desc, full_path, center_x, center_y, scale=0.8):
+def generate_maze_traces(map_desc, full_path, center_x, center_y, scale=0.8, y_stretch=1.0):
     """
     Generates batch-ready trace coordinates for a single micro-maze.
     Draws a literal grid (e.g. 5x5 lines) and a red path on top.
@@ -18,11 +18,11 @@ def generate_maze_traces(map_desc, full_path, center_x, center_y, scale=0.8):
     cols = len(map_desc[0])
     
     cell_w = scale / max(1, cols)
-    cell_h = scale / max(1, rows)
+    cell_h = (scale / y_stretch) / max(1, rows)
     
     # Top-left corner of the grid
     start_x = center_x - scale / 2
-    start_y = center_y + scale / 2
+    start_y = center_y + (scale / y_stretch) / 2
     
     grid_x, grid_y = [], []
     
@@ -36,7 +36,7 @@ def generate_maze_traces(map_desc, full_path, center_x, center_y, scale=0.8):
     for c in range(cols + 1):
         x = start_x + c * cell_w
         grid_x.extend([x, x, None])
-        grid_y.extend([start_y, start_y - scale, None])
+        grid_y.extend([start_y, start_y - (scale / y_stretch), None])
         
     # Helper to find the center of a specific cell (for the path)
     def get_center(r, c):
