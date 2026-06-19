@@ -134,14 +134,10 @@ def _maze_view(sample):
               'overflow': 'hidden'})
 
 
-def _token_grid(sample, ablated_ranks=None):
-    ablated_ranks = ablated_ranks or []
+def _token_grid(sample):
     tiles = []
     image_src = _load_maze_image(sample.get('metadata', {}).get('image_input'))
     for i, token in enumerate(sample['tokens'][:6]):
-        is_ablated = i in ablated_ranks
-        border_color = '#dc3545' if is_ablated else '#dee2e6'
-        border_width = '3px' if is_ablated else '1px'
         heatmap = go.Figure(data=go.Heatmap(
             z=token['spatial_focus'],
             colorscale='Viridis',
@@ -173,16 +169,16 @@ def _token_grid(sample, ablated_ranks=None):
                     config={'displayModeBar': False, 'staticPlot': False},
                     style={'height': '100%', 'position': 'relative', 'zIndex': 1, 'backgroundColor': 'transparent'}
                 ),
-                html.Div('ABLATED', style={
+                html.Div('ABLATED', id={'type': 'token-ablated-badge', 'index': i}, style={
                     'position': 'absolute', 'top': '2px', 'right': '2px',
                     'backgroundColor': '#dc3545', 'color': 'white',
                     'fontSize': '8px', 'padding': '1px 4px', 'borderRadius': '3px',
-                    'zIndex': 3, 'display': 'block' if is_ablated else 'none'
-                }) if is_ablated else None
-            ], style={
+                    'zIndex': 3, 'display': 'none'
+                })
+            ], id={'type': 'token-tile-wrapper', 'index': i}, style={
                 'position': 'relative',
                 'width': '10vh', 'height': '10vh', 'flexShrink': 0,
-                'border': f'{border_width} solid {border_color}',
+                'border': '1px solid #dee2e6',
                 'overflow': 'hidden',
                 'borderRadius': '4px',
                 'backgroundColor': '#f8f9fa'
@@ -469,9 +465,7 @@ def _render_output_panel(sample_id, ablated_ranks, show_strip=False):
 
 def update_level2_logic(clickData):
     if not clickData:
-        return (
-            html.Div(className='p-2'),
-        )
+        return html.Div(className='p-2')
 
     sample_id = clickData['points'][0]['hovertext']
     sample = next(s for s in LOADER.get_data() if s['sample_id'] == sample_id)
@@ -553,16 +547,45 @@ def register_level2_callbacks(app):
 
     @app.callback(
         Output('level2-token-grid', 'children'),
-        [Input('level1-scatter', 'clickData'),
-         Input('ablation-state', 'data')]
+        [Input('level1-scatter', 'clickData')]
     )
-    def update_token_grid(clickData, ablation_state):
+    def update_token_grid(clickData):
         if not clickData:
             return html.Div(className='p-2')
         sample_id = clickData['points'][0]['hovertext']
         sample = next(s for s in LOADER.get_data() if s['sample_id'] == sample_id)
+        return _token_grid(sample)
+
+    @app.callback(
+        Output({'type': 'token-tile-wrapper', 'index': ALL}, 'style'),
+        Output({'type': 'token-ablated-badge', 'index': ALL}, 'style'),
+        [Input('ablation-state', 'data')],
+        [State({'type': 'token-tile-wrapper', 'index': ALL}, 'id')]
+    )
+    def update_token_tile_styles(ablation_state, ids):
         ablated = (ablation_state or {}).get('ablated_ranks', [])
-        return _token_grid(sample, ablated)
+        wrapper_styles = []
+        badge_styles = []
+        for wrapper_id in ids:
+            i = wrapper_id['index']
+            is_ablated = i in ablated
+            border_color = '#dc3545' if is_ablated else '#dee2e6'
+            border_width = '3px' if is_ablated else '1px'
+            wrapper_styles.append({
+                'position': 'relative',
+                'width': '10vh', 'height': '10vh', 'flexShrink': 0,
+                'border': f'{border_width} solid {border_color}',
+                'overflow': 'hidden',
+                'borderRadius': '4px',
+                'backgroundColor': '#f8f9fa'
+            })
+            badge_styles.append({
+                'position': 'absolute', 'top': '2px', 'right': '2px',
+                'backgroundColor': '#dc3545', 'color': 'white',
+                'fontSize': '8px', 'padding': '1px 4px', 'borderRadius': '3px',
+                'zIndex': 3, 'display': 'block' if is_ablated else 'none'
+            })
+        return wrapper_styles, badge_styles
 
     @app.callback(
         Output('level2-output-pane', 'children'),

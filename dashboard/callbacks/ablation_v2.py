@@ -2,8 +2,8 @@ import json
 from pathlib import Path
 
 ABLATION_V2_DIR = Path('data/ablation_v2')
-RESULTS_PATH = ABLATION_V2_DIR / 'results.json'
-COMBOS_ALL6_PATH = ABLATION_V2_DIR / 'combos_all6.json'
+RESULTS_PATH = Path('data/ablation_results.json')
+COMBOS_ALL6_PATH = Path('data/ablation_v2/subsets.json')
 ABLATED_PLANS_DIR = ABLATION_V2_DIR / 'ablated_plans'
 ABLATED_PLANS_DIST_PATH = Path('data/ablated_plans_dist.jsonl')
 
@@ -128,8 +128,14 @@ def build_bitmask(sample_id, ablated_ranks):
 
 def load_ablated_plans(sample_id):
     """Return parsed ablated_plans file for sample_id, or None."""
-    sid = _fmt_sample_id(sample_id)
-    path = ABLATED_PLANS_DIR / f'sample_{sid.zfill(3) if sid.isdigit() else sid}.json'
+    sid = int(_fmt_sample_id(sample_id))
+    cache = _load_ablated_plans_dist()
+    if cache and sid in cache:
+        return cache[sid]
+    
+    # Fallback to file-based lookup
+    str_sid = _fmt_sample_id(sample_id)
+    path = ABLATED_PLANS_DIR / f'sample_{str_sid.zfill(3) if str_sid.isdigit() else str_sid}.json'
     if not path.exists():
         return None
     return json.loads(path.read_text())

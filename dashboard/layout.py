@@ -73,7 +73,7 @@ def create_sidebar():
                             {'label': 'Num Latent Tokens', 'value': 'num_latent'},
                             {'label': 'Projection Error', 'value': 'umap_uncertainty'}
                         ],
-                        value='avg_kl',
+                        value='level_id',
                         clearable=False,
                         className="dash-bootstrap"
                     )

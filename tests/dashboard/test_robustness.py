@@ -10,10 +10,8 @@ def test_callback_robustness_exhaustive():
         clickData = {'points': [{'hovertext': sample_id}]}
 
         # Test Level 2
-        ablation_summary, maze_view, ablation_tab = update_level2_logic(clickData)
-        assert ablation_summary is not None
+        maze_view = update_level2_logic(clickData)
         assert maze_view is not None
-        assert ablation_tab is not None
 
         # Test Level 3 for every token in this sample
         for token in sample['tokens']:

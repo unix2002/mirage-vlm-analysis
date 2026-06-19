@@ -50,15 +50,11 @@ def test_rq3_visual_dependency_curve():
     assert y_vals[0] > y_vals[-1]
 
 def test_level2_ablation_tab():
-    """Verify Level 2 now returns an ablation tab as the third element."""
+    """Verify Level 2 now returns a maze_view element."""
     sample = MOCK_DATA[0]
     clickData = {'points': [{'hovertext': sample['sample_id']}]}
     
-    ablation_summary, maze_view, ablation_tab = update_level2_logic(clickData)
+    maze_view = update_level2_logic(clickData)
     
-    # Ablation summary is a graph for real data; for mock data it may be a placeholder.
-    assert ablation_summary is not None
     # Maze view is an html.Div containing the maze image.
     assert maze_view is not None
-    # Ablation tab is an html.Div with the ablation landscape.
-    assert ablation_tab is not None

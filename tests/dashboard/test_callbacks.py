@@ -7,21 +7,18 @@ from dash import html
 
 
 def test_update_level2_logic_no_data():
-    ablation_summary, maze_view, ablation_tab = update_level2_logic(None)
-    assert isinstance(ablation_summary, html.Div)
-    assert "Select a Sample (Level 1)" in ablation_summary.children
+    maze_view = update_level2_logic(None)
     assert isinstance(maze_view, html.Div)
-    assert isinstance(ablation_tab, html.Div)
+    assert "p-2" in maze_view.className
 
 
 def test_update_level2_logic_valid_click():
     valid_id = MOCK_DATA[0]['sample_id']
     clickData = {'points': [{'hovertext': valid_id}]}
-    ablation_summary, maze_view, ablation_tab = update_level2_logic(clickData)
+    maze_view = update_level2_logic(clickData)
 
-    assert ablation_summary is not None
+    assert maze_view is not None
     assert isinstance(maze_view, html.Div)
-    assert isinstance(ablation_tab, html.Div)
 
 
 def test_update_level3_logic_no_clicks():

@@ -60,9 +60,10 @@ def test_static_id_list():
     layout = create_layout()
     required_ids = [
         'level1-scatter',
-        'level2-tabs',
-        'level2-ablation-pane',
-        'level2-ablation-tab',
+        'level2-tab-selector',
+        'level2-output-pane',
+        'level2-kl-pane',
+        'level2-probing-pane',
         'level2-maze-pane',
         'level2-token-grid',
         'token-detail-heatmap',
