@@ -327,3 +327,25 @@ class RealDataLoader:
 # Singleton instance
 LOADER = RealDataLoader()
 REAL_DATA = LOADER.get_data()
+
+
+def get_layer_heatmap(sample_id, token_idx, layer):
+    """Load attention for (sample, token_idx, layer) → 11×11 spatial focus grid."""
+    import torch
+    sid = sample_id if isinstance(sample_id, str) else f"sample_{sample_id:03d}"
+    data_dir = getattr(LOADER, 'data_dir', 'data')
+    attn_path = os.path.join(data_dir, 'tensors', sid, 'latent_to_visual_attn.pt')
+    if not os.path.exists(attn_path):
+        return None
+    attn = torch.load(attn_path, map_location='cpu')
+    if isinstance(attn, dict):
+        keys = sorted(attn.keys())
+        if layer not in attn:
+            layer = keys[-1] if keys else 0
+        attn = attn[layer]
+    token_attn = attn[token_idx, :].numpy()
+    n_vis = len(token_attn)
+    side = int(np.sqrt(n_vis))
+    if side * side == n_vis:
+        return token_attn.reshape(side, side).tolist()
+    return None

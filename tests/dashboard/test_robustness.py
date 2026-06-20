@@ -8,7 +8,6 @@ def test_callback_robustness_exhaustive():
     for sample in MOCK_DATA:
         sample_id = sample['sample_id']
         clickData = {'points': [{'hovertext': sample_id}]}
-<<<<<<< HEAD
 
         # Test Level 2
         ablation_summary, maze_view, ablation_tab = update_level2_logic(clickData)
@@ -16,13 +15,6 @@ def test_callback_robustness_exhaustive():
         assert maze_view is not None
         assert ablation_tab is not None
 
-=======
-        
-        # Test Level 2 (returns 3 values: title, figure, store)
-        out2 = update_level2_logic(clickData)
-        assert out2 is not None
-        
->>>>>>> 77f8af0 (Improve UMAP projections and dashboard visualization)
         # Test Level 3 for every token in this sample
         for token in sample['tokens']:
             token_id = token['token_id']

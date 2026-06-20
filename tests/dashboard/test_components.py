@@ -7,18 +7,16 @@ import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 from dashboard.mock_data import MOCK_DATA
 
-def test_level1_landscape_returns_figure():
+def test_level1_landscape_returns_graph():
     component = create_level1_landscape(MOCK_DATA)
+    # The component is now returning a go.Figure instead of dcc.Graph directly
     assert isinstance(component, go.Figure)
+    assert component.layout.title.text == "Fig 1. Latent Reasoning Landscape"
 
 def test_level2_path_structure():
     component = create_level2_path()
     assert isinstance(component, dbc.Row)
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> 77f8af0 (Improve UMAP projections and dashboard visualization)
     ids = []
     def find_ids(node):
         if hasattr(node, 'id') and node.id:
@@ -31,13 +29,9 @@ def test_level2_path_structure():
                 find_ids(node.children)
 
     find_ids(component)
-<<<<<<< HEAD
     assert 'level2-tabs' in ids
     assert 'level2-ablation-pane' in ids
     assert 'level2-ablation-tab' in ids
-=======
-    assert 'level2-ablation-pane' in ids
->>>>>>> 77f8af0 (Improve UMAP projections and dashboard visualization)
     assert 'level2-maze-pane' in ids
     assert 'level2-token-grid' in ids
 
@@ -59,9 +53,4 @@ def test_level3_detail_structure():
     find_ids(component)
     assert 'token-detail-heatmap' in ids
     assert 'token-detail-probe-bar' in ids
-<<<<<<< HEAD
     assert 'current-token-state' in ids
-=======
-    assert 'token-detail-dependency-curve' in ids
-    assert 'ablate-btn' in ids
->>>>>>> 77f8af0 (Improve UMAP projections and dashboard visualization)

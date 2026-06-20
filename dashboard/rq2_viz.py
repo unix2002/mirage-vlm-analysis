@@ -154,7 +154,7 @@ def build_rq2_dynamic_grid(sample_id, layer=26, per_sample_payload=None):
         colorscale=[[0, "#f7fcf7"], [1, "#a7dca7"]],
         text=text_vals,
         texttemplate="%{text}",
-        textfont={"size": 8},
+        textfont={"size": 12},
         showscale=False,
         xgap=1, ygap=1,
         hovertemplate="Step %{y}<br>%{x}<br>Prob: %{z:.3f}<extra></extra>"

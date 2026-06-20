@@ -3,8 +3,10 @@ import dash
 import plotly.express as px
 import plotly.graph_objects as go
 import json
+import numpy as np
 from ..mock_data import MOCK_DATA
 from .ablation_v2 import load_per_token_summary
+from ..data_loader import get_layer_heatmap
 
 
 def _extract_active_click(token_clicks):
@@ -39,13 +41,17 @@ def update_level3_logic(token_clicks, clickData, triggered_id_full):
     token = next(t for t in sample['tokens'] if t['token_id'] == token_id)
     token_rank = int(token_id[1:])
 
-    fig_heatmap = px.imshow(
-        token['spatial_focus'], color_continuous_scale='Viridis')
+    grid = np.array(token['spatial_focus'])
+    grid = np.flipud(grid)
+    fig_heatmap = px.imshow(grid, color_continuous_scale='Viridis')
     _style_detail_fig(fig_heatmap, f"RQ1: Spatial Focus Heatmap (Token {token_id})")
+    n = grid.shape[0]
     fig_heatmap.update_layout(
         coloraxis_showscale=True,
         xaxis=dict(title="Column"),
-        yaxis=dict(title="Row")
+        yaxis=dict(title="Row",
+                   tickvals=[0, n // 2, n - 1],
+                   ticktext=[str(n - 1), str(n // 2), "0"]),
     )
 
     dirs = ['UP', 'DOWN', 'LEFT', 'RIGHT']
@@ -112,4 +118,34 @@ def register_level3_callbacks(app):
             return (dash.no_update,) * 5
 
         return update_level3_logic(active_click, clickData, json.dumps({'index': token_index}))
+
+    @app.callback(
+        Output('token-detail-heatmap', 'figure', allow_duplicate=True),
+        [Input('layer-slider', 'value')],
+        [State('current-token-state', 'data')],
+        prevent_initial_call=True,
+    )
+    def update_layer_heatmap(layer, token_state):
+        if not token_state:
+            return dash.no_update
+        sid = token_state.get('sample_id')
+        token_id = token_state.get('token_id', 'T0')
+        token_idx = int(token_id[1:]) if token_id.startswith('T') else 0
+        grid = get_layer_heatmap(sid, token_idx, layer)
+        if grid is None:
+            return dash.no_update
+        grid = np.array(grid)
+        grid = np.flipud(grid)
+        fig = px.imshow(grid, color_continuous_scale='Viridis')
+        n = grid.shape[0]
+        fig.update_layout(
+            margin=dict(l=5, r=5, t=20, b=5),
+            coloraxis_showscale=True,
+            xaxis=dict(title="Column"),
+            yaxis=dict(title="Row",
+                       tickvals=[0, n // 2, n - 1],
+                       ticktext=[str(n - 1), str(n // 2), "0"]),
+            title=dict(text=f"RQ1: Spatial Focus ({token_id}, layer {layer})", font=dict(size=10)),
+        )
+        return fig
 

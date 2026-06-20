@@ -12,7 +12,6 @@ __all__ = [
     "update_level3_logic",
 ]
 
-
 def register_callbacks(app):
     register_level1_callbacks(app)
     register_level2_callbacks(app)

@@ -646,8 +646,16 @@ def register_level2_callbacks(app):
          Input('ablation-state', 'data')]
     )
     def update_kl_pane(clickData, active_tab, ablation_state):
-        if not clickData or active_tab != 'ablation':
+        if not clickData:
             return html.Div(className='p-2')
+        if active_tab != 'ablation':
+            return html.Div([
+                html.Div("RQ2: Probe accuracy visualizations — data pending",
+                         style={'fontSize': '0.6rem', 'color': '#888', 'padding': '8px',
+                                'textTransform': 'uppercase', 'letterSpacing': '0.05em'}),
+                html.Div(id='rq2-static-bar-placeholder'),
+                html.Div(id='rq2-dynamic-grid-placeholder'),
+            ], style={'height': '100%'})
         sample_id = clickData['points'][0]['hovertext']
         sample = next(s for s in MOCK_DATA if s['sample_id'] == sample_id)
         sid = _ablation_key(sample)

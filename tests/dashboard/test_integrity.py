@@ -60,7 +60,6 @@ def test_static_id_list():
     layout = create_layout()
     required_ids = [
         'level1-scatter',
-<<<<<<< HEAD
         'level2-tabs',
         'level2-ablation-pane',
         'level2-ablation-tab',
@@ -72,18 +71,6 @@ def test_static_id_list():
         'level3-instructions',
         'current-token-state',
         'ablation-state',
-=======
-        'level2-ablation-pane',
-        'level2-maze-pane',
-        'level2-token-grid',
-        'level2-output-pane',
-        'token-detail-heatmap',
-        'rq2-static-bar',
-        'rq2-dynamic-grid',
-        'token-detail-dependency-curve',
-        'ablate-btn',
-        'ablate-output'
->>>>>>> 77f8af0 (Improve UMAP projections and dashboard visualization)
     ]
     
     def find_id(node, target_id):
