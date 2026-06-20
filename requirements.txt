@@ -1,14 +1,10 @@
 torch
-torchvision
-datasets
-trl==0.15.2
-qwen_vl_utils
-mathruler
-pylatexenc
-Pillow
 dash
 dash-bootstrap-components
 plotly
 pandas
 numpy
+scikit-learn
+umap-learn
+scipy
 pytest
