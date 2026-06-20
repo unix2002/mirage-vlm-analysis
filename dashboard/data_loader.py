@@ -174,8 +174,6 @@ class RealDataLoader:
         if not self.metadata:
             return []
 
-        # Load all available samples; UMAP projection is deferred until first use
-        # to avoid a startup RAM spike. Override with DASHBOARD_MAX_SAMPLES if needed.
         max_samples = int(os.environ.get('DASHBOARD_MAX_SAMPLES', 1000))
         samples_to_process = self.metadata[:max_samples]
         processed = []
@@ -183,7 +181,6 @@ class RealDataLoader:
         self.valid_indices = []
         self.has_raw_hs = False
 
-        # Try loading pre-computed PCA cache (removes 10 GB hidden-states dependency)
         pca_cache = os.path.join('data', 'processed', 'pca_vectors.npy')
         if os.path.exists(pca_cache):
             self.X_pca = np.load(pca_cache).astype(np.float64)
@@ -192,7 +189,6 @@ class RealDataLoader:
             logging.info("Loaded pre-computed PCA vectors (%d × %d) — hidden states not needed.",
                          self.X_pca.shape[0], self.X_pca.shape[1])
 
-        # Try loading pre-computed attention cache (per-layer heatmap slider)
         attn_cache_path = os.path.join('data', 'processed', 'attn_full.npz')
         if os.path.exists(attn_cache_path):
             self.attn_cache = dict(np.load(attn_cache_path, allow_pickle=False))
@@ -209,7 +205,6 @@ class RealDataLoader:
                 image_input = meta.get('image_input', '')
                 level_id = self._extract_level(image_input)
                 
-                # Extract map_id
                 map_id = 0
                 map_match = re.search(r'level_\d+/(\d+)/', image_input)
                 if map_match:
@@ -224,12 +219,11 @@ class RealDataLoader:
                 latent_pos = meta.get('token_positions', {}).get('latent', [])
                 num_latent = len(latent_pos) if latent_pos else 6
 
-                # Fetch maze data
                 maze_info = self.maze_dict.get((level_id, map_id), {})
                 map_desc = maze_info.get('map_desc')
                 full_path = maze_info.get('full_path')
 
-                # 1. Load Attention
+                # Attention
                 real_attn = None
                 last_layer = None
                 if os.path.exists(attn_path):
@@ -293,7 +287,7 @@ class RealDataLoader:
                         'kl_divergence': kl_divergence
                     })
 
-                # 2. Load Hidden States (skip if PCA cache is available)
+                # Hidden states (skip if PCA cache available)
                 if self.X_pca is None and os.path.exists(hs_path):
                     self.has_raw_hs = True
                     try:
@@ -345,28 +339,21 @@ class RealDataLoader:
             except Exception as e:
                 logging.warning(f"Failed processing sample {i}: {e}")
 
-        # Compute per-sample plan-change flag from train_plans_gen.jsonl
+        # Enrich with plan-flip flag
         _enrich_has_plan_flip(self.data_dir, processed)
 
-        # PCA cache path — skip hidden-state loading entirely
         if self.X_pca is not None:
             if len(processed) < self.X_pca.shape[0]:
                 self.X_pca = self.X_pca[:len(processed)]
             self.valid_indices = list(range(len(processed)))
-        # Legacy path — build feature matrices from hidden states
         elif len(all_hidden_states) > 5:
             self.X_raw = np.array(all_hidden_states)
-
-            # Pre-compute L2 Normalization
             norms = np.linalg.norm(self.X_raw, axis=1, keepdims=True)
             self.X_norm = self.X_raw / (norms + 1e-8)
-
-            # Pre-compute PCA Denoising
             n_comp = min(32, self.X_norm.shape[0], self.X_norm.shape[1])
             pca = PCA(n_components=n_comp, random_state=42)
             self.X_pca = pca.fit_transform(self.X_norm)
 
-        # Eagerly compute default UMAP at startup from PCA input
         if self.X_pca is not None and HAS_UMAP and self.valid_indices:
             reducer = umap.UMAP(n_neighbors=5, min_dist=0.3, metric='cosine',
                                 n_components=2, random_state=42)
@@ -389,11 +376,7 @@ class RealDataLoader:
         return processed
 
     def recompute_umap(self, n_neighbors, min_dist, use_pca=False, processed_override=None):
-        """Dynamic re-projection using pre-computed features.
-
-        Falls back to PCA input when raw hidden states are unavailable
-        (i.e., when using the pre-computed PCA cache).
-        """
+        """Re-run UMAP from pre-computed features. Falls back to PCA input."""
         target_processed = processed_override if processed_override is not None else self.processed_samples
 
         if not target_processed:
@@ -402,13 +385,8 @@ class RealDataLoader:
 
         if self.X_pca is not None and HAS_UMAP:
             try:
-                # Use PCA input as the default; raw 4096-dim only when available
-                if use_pca or self.X_norm is None:
-                    X_input = self.X_pca
-                else:
-                    X_input = self.X_norm
+                X_input = self.X_pca if use_pca or self.X_norm is None else self.X_norm
 
-                # Scientific Stabilizer: Cosine Metric
                 reducer = umap.UMAP(
                     n_neighbors=int(n_neighbors),
                     min_dist=float(min_dist),
@@ -418,18 +396,15 @@ class RealDataLoader:
                 )
                 coords = reducer.fit_transform(X_input)
 
-                # Vectorized uncertainty calculation (Average Local Error)
-                # 1. High-D distances (Cosine) normalized by max
+                # Projection uncertainty (normalized distance correlation loss)
                 dist_high = 1.0 - cosine_similarity(X_input)
                 max_high = np.max(dist_high)
                 if max_high > 0: dist_high /= max_high
 
-                # 2. 2D distances (Euclidean) normalized by max
                 dist_2d = euclidean_distances(coords)
                 max_2d = np.max(dist_2d)
                 if max_2d > 0: dist_2d /= max_2d
 
-                # 3. Average Local Error per point
                 uncertainty = np.mean(np.abs(dist_high - dist_2d), axis=1)
 
                 for idx, coord_idx in enumerate(self.valid_indices):

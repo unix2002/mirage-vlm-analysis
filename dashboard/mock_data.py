@@ -5,7 +5,6 @@ from .data_loader import LOADER
 def generate_mock_data(n_samples=50):
     np.random.seed(42)
     
-    # Define cluster centers for each direction to test Convex Hulls
     centers = {
         'UP': [2, 8],
         'DOWN': [2, 2],

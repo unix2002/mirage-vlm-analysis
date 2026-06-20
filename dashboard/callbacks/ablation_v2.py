@@ -109,10 +109,6 @@ def load_combo_dist(sample_id, mask):
     )
 
 
-# ── Ablation landscape: dose-response + per-token contributions ────────
-# In ablated_plans subsets the mask is indexed by token rank (bit i = rank i),
-# so it can be built directly from the selected ranks without a position map.
-
 def mask_for_ranks(ablated_ranks, n=6):
     """Bitmask over token ranks 0..n-1 matching ablated_plans subset keys."""
     ranks = set(ablated_ranks)

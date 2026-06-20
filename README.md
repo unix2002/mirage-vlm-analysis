@@ -9,52 +9,33 @@ Interactive visual analytics for inspecting latent reasoning in vision-language 
 
 ## Quick Start: Running the Dashboard
 
-### Prerequisites
+```bash
+git clone https://github.com/unix2002/mirage-vlm-analysis
+cd mirage-vlm-analysis
+bash setup.sh
+```
+
+This creates a Python virtual environment, installs dependencies, downloads ~83 MB of data, and offers to start the dashboard. To start manually next time:
 
 ```bash
-pip install -r requirements.txt
-```
-
-### Data Setup
-
-The dashboard needs the following files in `data/`:
-
-| File | Size | Source |
-|------|------|--------|
-| `ablation_results.json` | 5 MB | Git |
-| `train_plans_gen.jsonl` | 12 MB | Git |
-| `processed/rq2/probe_results.json` | 1 KB | Git |
-| `processed/rq2/probe_results_per_sample.json` | 18 MB | Git |
-| `metadata.json` | 2.7 MB | External (Drive) |
-| `tensors/` (996 sample dirs) | 16 GB | External (Drive) |
-| `vsp_spatial_planning/` (maze images) | 111 MB | External (Drive) |
-
-The final structure:
-
-```
-data/
-├── ablation_results.json
-├── train_plans_gen.jsonl
-├── processed/rq2/probe_results.json
-├── processed/rq2/probe_results_per_sample.json
-├── metadata.json
-├── tensors/
-│   ├── sample_000/{hidden_states.pt, latent_to_visual_attn.pt, ...}
-│   └── ...
-└── vsp_spatial_planning/
-    ├── img/ (maze step images)
-    └── train_direct.jsonl
-```
-
-The large files (`metadata.json`, `tensors/`, `vsp_spatial_planning/`) are shared privately via Google Drive — ask the team for the download link. The smaller JSON/JSONL files are tracked in git.
-
-### Run
-
-```bash
+source env/bin/activate
 python3 run_dashboard.py
 ```
 
 Open `http://127.0.0.1:8055` in your browser.
+
+**GitHub Release** (downloaded via `setup.sh`):
+- `data/processed/attn_full.npz` (38 MB) — per-layer attention cache for the heatmap slider
+- `data/metadata.json` (2.7 MB) — sample index
+- `data/vsp_spatial_planning.tar.gz` (42 MB) — maze images for micro-view overlays
+
+**Git-tracked** (available on clone):
+- `data/ablation_results.json` (5 MB) — mode-based ablation results
+- `data/train_plans_gen.jsonl` (12 MB) — combinatorial ablation data
+- `data/processed/pca_vectors.npy` (125 KB) — UMAP projection cache
+- `data/processed/rq2/probe_results*.json` (18 MB) — RQ2 probe accuracy data
+
+No 16 GB tensors needed. After download, every dashboard feature works immediately.
 
 ---
 

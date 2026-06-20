@@ -31,7 +31,6 @@ _HOVER_TEMPLATE = (
 
 
 def _compute_y_stretch(viewport, df):
-    """Compute y-stretch factor to preserve maze aspect ratio."""
     if viewport:
         vp_w = viewport['x_max'] - viewport['x_min']
         vp_h = viewport['y_max'] - viewport['y_min']
@@ -108,16 +107,12 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
     if len(df) == 0:
         return go.Figure()
 
-    # Calculate dynamic sizes
-    # Uncertainty Aura Size
     df['aura_size'] = 10 + df['umap_uncertainty'] * 60
 
-    # Velocity / Confidence Size
     kl_min, kl_max = df['avg_kl'].min(), df['avg_kl'].max()
     kl_norm = (df['avg_kl'] - kl_min) / (kl_max - kl_min + 1e-8)
     df['velocity_size'] = 8 + kl_norm * 14
 
-    # Resolve Color Metric Label
     metric_labels = {
         'avg_kl': 'Reasoning Intensity',
         'level_id': 'Level ID',
@@ -127,8 +122,6 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
     }
     color_title = metric_labels.get(color_metric, color_metric)
 
-
-    # Add Cluster Boundaries (Convex Hulls)
     fig = go.Figure()
 
     if HAS_SCIPY and len(df) > 5 and zoom_level < 3.0:
@@ -154,11 +147,10 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
                         ))
                     except: pass
 
-    # Transition logic based on zoom level
+    # Zoom thresholds
     show_macro = zoom_level < 20.0
     show_micro = zoom_level >= 15.0
     
-    # Base macro opacity (the triangles fade out at 15.0)
     macro_opacity = max(0.0, min(1.0, 1.0 - (zoom_level - 15.0) / 5.0)) if zoom_level > 15.0 else 1.0
     
     # Aura opacity (starts fading in at zoom 3.0, fully opaque at 8.0, fades out with macro at 15.0)
@@ -173,7 +165,6 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
     colorscale = 'Viridis'
 
     if show_macro:
-        # Add the Uncertainty Aura trace (behind main points)
         if aura_opacity > 0:
             fig.add_trace(go.Scatter(
                 x=df['umap_x'],
@@ -192,7 +183,6 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
                 name="Uncertainty Aura"
             ))
 
-        # Add the main scatter trace (Velocity / Confidence glyphs)
         fig.add_trace(go.Scatter(
             x=df['umap_x'],
             y=df['umap_y'],
@@ -247,13 +237,12 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
             ))
 
     if show_micro:
-        # Generate batch traces for all visible mazes
         all_grid_x, all_grid_y = [], []
         all_path_x, all_path_y = [], []
         all_start_x, all_start_y = [], []
         all_end_x, all_end_y = [], []
 
-        # Dynamic scaling: keep mazes consistent on screen, prevent clashing
+        # Keep mazes consistent on screen across zoom levels
         base_scale = 3.0 / max(1.0, zoom_level)
         y_stretch = _compute_y_stretch(viewport, df)
 

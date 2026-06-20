@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import plotly.graph_objects as go
 
-# Paths
+
 PROBE_RESULTS_PATH = Path("data/processed/rq2/probe_results.json")
 PER_SAMPLE_RESULTS_PATH = Path("data/processed/rq2/probe_results_per_sample.json")
 
