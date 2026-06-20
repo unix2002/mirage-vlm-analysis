@@ -10,6 +10,8 @@ try:
 except ImportError:
     HAS_SCIPY = False
 
+from mirage_vlm.utils.maze_renderer import generate_maze_traces
+
 
 def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, viewport=None):
     if not data_source:
@@ -187,11 +189,13 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
                 showscale=True,
                 opacity=macro_opacity,
                 colorbar=dict(
-                    title=color_title,
-                    thickness=15,
-                    len=0.5,
-                    y=0.5,
-                    x=1.15,
+                    title=dict(text=color_title, side='bottom', font=dict(size=10)),
+                    orientation='h',
+                    thickness=12,
+                    len=0.6,
+                    y=-0.28,
+                    x=0.5,
+                    xanchor='center',
                     tickfont=dict(size=10)
                 ) if macro_opacity > 0.5 else None,
                 line=dict(
@@ -329,7 +333,7 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
     fig.update_layout(
         template='plotly_white',
         clickmode='event',
-        margin=dict(l=40, r=80, t=30, b=40),
+        margin=dict(l=40, r=80, t=30, b=65),
         showlegend=False,
         autosize=True,
         xaxis=dict(
@@ -350,7 +354,9 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
             zeroline=True,
             zerolinecolor='#e0e0e0',
             showticklabels=True,
-            tickfont=dict(size=10, color='#666')
+            tickfont=dict(size=10, color='#666'),
+            scaleanchor='x',
+            scaleratio=1,
         ),
         plot_bgcolor='white',
         paper_bgcolor='white',
@@ -359,8 +365,15 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
             text="Fig 1. Latent Reasoning Landscape",
             x=0.05,
             y=0.98,
-            font=dict(size=14, color="#111")
+            font=dict(size=15, color="#111")
         )
     )
+
+    if len(df) > 0:
+        x_vals, y_vals = df['umap_x'], df['umap_y']
+        x_pad = (x_vals.max() - x_vals.min()) * 0.05 or 1.0
+        y_pad = (y_vals.max() - y_vals.min()) * 0.05 or 1.0
+        fig.update_xaxes(range=[x_vals.min() - x_pad, x_vals.max() + x_pad])
+        fig.update_yaxes(range=[y_vals.min() - y_pad, y_vals.max() + y_pad])
 
     return fig

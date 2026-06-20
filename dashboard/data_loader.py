@@ -268,8 +268,22 @@ class RealDataLoader:
             pca = PCA(n_components=n_comp, random_state=42)
             self.X_pca = pca.fit_transform(self.X_norm)
 
-            # UMAP is computed lazily on first callback instead of at startup to avoid RAM spikes.
-            logging.info("Hidden-state cache ready; UMAP projection will be computed on demand.")
+            # Eagerly compute default UMAP at startup using PCA input
+            # (32-dim → seconds). The raw 4096-dim input is available via
+            # the PCA toggle for users who want the higher-dim embedding.
+            if HAS_UMAP and self.valid_indices:
+                reducer = umap.UMAP(n_neighbors=5, min_dist=0.3, metric='cosine',
+                                    n_components=2, random_state=42)
+                coords = reducer.fit_transform(self.X_pca)
+                for idx, coord_idx in enumerate(self.valid_indices):
+                    if coord_idx >= len(processed):
+                        continue
+                    target = processed[coord_idx]
+                    target['umap_x'] = float(coords[idx, 0])
+                    target['umap_y'] = float(coords[idx, 1])
+                logging.info("Default UMAP projection ready (PCA input).")
+
+            logging.info("Hidden-state cache ready; default UMAP projection pre-computed.")
         else:
             if not HAS_UMAP:
                 logging.error("UMAP library not installed. Points will remain at origin.")
@@ -281,6 +295,10 @@ class RealDataLoader:
     def recompute_umap(self, n_neighbors, min_dist, use_pca=False, processed_override=None):
         """Dynamic re-projection using pre-computed features."""
         target_processed = processed_override if processed_override is not None else self.processed_samples
+
+        if not target_processed:
+            logging.warning("No processed samples available for UMAP re-projection")
+            return target_processed
 
         if self.X_raw is not None and HAS_UMAP:
             try:

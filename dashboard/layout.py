@@ -23,8 +23,8 @@ def create_sidebar():
             dbc.CardBody([
                 dcc.Graph(
                     id='level1-scatter', 
-                    figure=create_level1_landscape(MOCK_DATA), 
-                    style={'height': '60vh', 'width': '100%'},
+                    figure=create_level1_landscape(MOCK_DATA),
+                    style={'height': '55vh', 'width': '100%'},
                     config={'responsive': True}
                 )
             ], className="p-0")
@@ -57,7 +57,7 @@ def create_sidebar():
                 dbc.Checkbox(
                     id="umap-pca-toggle",
                     label="PCA Denoising (Pre-process)",
-                    value=False,
+                    value=True,
                     className="small text-muted mb-2"
                 ),
 
