@@ -32,17 +32,16 @@ def _build_level3_content(fig_heatmap, fig_bar, fig_curve, layer_value=26):
     ])
 
 
+_OFF_VALUE_RATIO = 0.35
+_KL_DECAY_RATE = 0.82
+
+
 def _extract_active_click(token_clicks):
-    if not token_clicks:
-        return None
-    for item in token_clicks:
-        if item:
-            return item
-    return None
+    return next((item for item in (token_clicks or []) if item), None)
 
 
 def _style_detail_fig(fig, title):
-    """Apply the shared compact margin + title used by all Level 3 figures."""
+    """Apply shared compact margin + title for all Level 3 figures."""
     fig.update_layout(
         margin=dict(l=5, r=5, t=20, b=5),
         title=dict(text=title, font=dict(size=10)),
@@ -50,7 +49,20 @@ def _style_detail_fig(fig, title):
     return fig
 
 
-def update_level3_logic(token_clicks, clickData, triggered_id_full):
+def _apply_heatmap_layout(fig, title, n):
+    """Shared heatmap axis/colorbar config used by initial build and slider rebuild."""
+    _style_detail_fig(fig, title)
+    fig.update_layout(
+        coloraxis_showscale=True,
+        coloraxis_colorbar=dict(thickness=8, len=0.5, outlinewidth=0),
+        xaxis=dict(title="Column"),
+        yaxis=dict(title="Row",
+                   tickvals=[0, n // 2, n - 1],
+                   ticktext=[str(n - 1), str(n // 2), "0"]),
+    )
+
+
+def update_level3_logic(token_clicks, clickData, triggered_id_full, data=None):
     active_click = _extract_active_click(token_clicks)
     if not active_click or not clickData:
         return go.Figure(), go.Figure(), go.Figure(), "Level 3: Token Details", {}
@@ -60,27 +72,20 @@ def update_level3_logic(token_clicks, clickData, triggered_id_full):
 
     token_id = json.loads(triggered_id_full)['index']
     sample_id = clickData['points'][0]['hovertext']
-    sample = next(s for s in LOADER.get_data() if s['sample_id'] == sample_id)
+    if data is None:
+        data = LOADER.get_data()
+    sample = next(s for s in data if s['sample_id'] == sample_id)
     token = next(t for t in sample['tokens'] if t['token_id'] == token_id)
     token_rank = int(token_id[1:])
 
     grid = np.array(token['spatial_focus'])
     grid = np.flipud(grid)
     fig_heatmap = px.imshow(grid, color_continuous_scale='Viridis')
-    _style_detail_fig(fig_heatmap, f"RQ1: Spatial Focus Heatmap (Token {token_id})")
-    n = grid.shape[0]
-    fig_heatmap.update_layout(
-        coloraxis_showscale=True,
-        coloraxis_colorbar=dict(thickness=8, len=0.5, outlinewidth=0),
-        xaxis=dict(title="Column"),
-        yaxis=dict(title="Row",
-                   tickvals=[0, n // 2, n - 1],
-                   ticktext=[str(n - 1), str(n // 2), "0"]),
-    )
+    _apply_heatmap_layout(fig_heatmap, f"RQ1: Spatial Focus Heatmap (Token {token_id})", grid.shape[0])
 
     dirs = ['UP', 'DOWN', 'LEFT', 'RIGHT']
     base = max(0.0, min(1.0, float(token['probe_accuracy'])))
-    off_value = max(0.0, min(1.0, base * 0.35))
+    off_value = max(0.0, min(1.0, base * _OFF_VALUE_RATIO))
     accs = [base if d == sample['move_direction'] else off_value for d in dirs]
     fig_bar = px.bar(x=dirs, y=accs, labels={'x': 'Direction', 'y': 'Probe Accuracy'})
     _style_detail_fig(fig_bar, f"RQ2: Directional Probe Accuracy (Token {token_id})")
@@ -95,7 +100,7 @@ def update_level3_logic(token_clicks, clickData, triggered_id_full):
         x = list(range(len(kls)))
         kls_label = 'KL Divergence (per position)'
     else:
-        kls = [token['kl_divergence'] * (0.82 ** s) for s in range(10)]
+        kls = [token['kl_divergence'] * (_KL_DECAY_RATE ** s) for s in range(10)]
         x = list(range(10))
         kls_label = 'KL Divergence (synthetic decay)'
     fig_curve = px.line(x=x, y=kls, labels={'x': 'Position', 'y': kls_label})
@@ -165,15 +170,5 @@ def register_level3_callbacks(app):
         grid = np.array(grid)
         grid = np.flipud(grid)
         fig_heatmap = px.imshow(grid, color_continuous_scale='Viridis')
-        n = grid.shape[0]
-        fig_heatmap.update_layout(
-            margin=dict(l=5, r=5, t=20, b=5),
-            coloraxis_showscale=True,
-            coloraxis_colorbar=dict(thickness=8, len=0.5, outlinewidth=0),
-            xaxis=dict(title="Column"),
-            yaxis=dict(title="Row",
-                       tickvals=[0, n // 2, n - 1],
-                       ticktext=[str(n - 1), str(n // 2), "0"]),
-            title=dict(text=f"RQ1: Spatial Focus ({token_id}, layer {layer})", font=dict(size=10)),
-        )
+        _apply_heatmap_layout(fig_heatmap, f"RQ1: Spatial Focus ({token_id}, layer {layer})", grid.shape[0])
         return fig_heatmap

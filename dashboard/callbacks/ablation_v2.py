@@ -25,12 +25,7 @@ def _load_results():
 
 
 def _fmt_sample_id(sample_id):
-    """Normalise a sample id to the bare-integer key used in the JSON result
-    files (e.g. 'sample_007' -> '7', 7 -> '7').
-
-    The ablated_plans loader re-pads this to the zero-padded filename, so the
-    same canonical form works for both dict-key and file-path lookups.
-    """
+    """Normalise sample id to integer-string key (e.g. 'sample_007' → '7')."""
     if isinstance(sample_id, int):
         return str(sample_id)
     s = sample_id[7:] if sample_id.startswith("sample_") else str(sample_id)
@@ -211,12 +206,7 @@ def mask_for_ranks(ablated_ranks, n=6):
 
 
 def sample_dose_response(sample_id):
-    """Per-k KL distribution and flip rates for one sample.
-
-    KL band + plan-flip rate come from the 63 self-consistent ablated_plans
-    subsets; exact-match flip rate comes from combos_all6 (bucketed by popcount).
-    Returns {'rows': [...], 'token_labels', 'n'} or None.
-    """
+    """Per-k KL distribution and flip rates for one sample. Returns {'rows': [...]} or None."""
     plans = load_ablated_plans(sample_id)
     if not plans:
         return None
@@ -309,11 +299,7 @@ def toggle_rank(sample_id, current_ranks, rank):
 
 
 def subset_lattice(sample_id):
-    """Every ablation subset for one sample, for the KL-fingerprint view.
-
-    Returns {'cells': [{'mask', 'k', 'kl', 'ranks'}, ...], 'max_kl', 'n'} or None.
-    Built straight from the 63 self-consistent ablated_plans subsets (no rerun).
-    """
+    """All 63 ablation subsets for one sample, for the KL-fingerprint view. Returns {'cells': [...], 'max_kl', 'n'}."""
     plans = load_ablated_plans(sample_id)
     if not plans:
         return None

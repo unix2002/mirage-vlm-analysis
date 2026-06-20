@@ -15,11 +15,13 @@ def create_header():
     ], className="py-2 border-bottom bg-light", style={'height': '5vh'})
 
 
+_HEADER_CLASS = "py-1 small font-weight-bold"
+
+
 def create_sidebar():
     return html.Div([
-        # Level 1 Landscape Graph
         dbc.Card([
-            dbc.CardHeader("Level 1: Sample Landscape", className="py-1 small font-weight-bold"),
+            dbc.CardHeader("Level 1: Sample Landscape", className=_HEADER_CLASS),
             dbc.CardBody([
                 dcc.Graph(
                     id='level1-scatter', 
@@ -32,7 +34,7 @@ def create_sidebar():
         
         # UMAP Tuner Controls
         dbc.Card([
-            dbc.CardHeader("UMAP Parameter Tuner", className="py-1 small font-weight-bold"),
+            dbc.CardHeader("UMAP Parameter Tuner", className=_HEADER_CLASS),
             dbc.CardBody([
                 html.Div([
                     html.Label("Nearest Neighbors (n_neighbors)", className="small text-muted mb-0"),
@@ -91,7 +93,6 @@ def create_sidebar():
 
 def create_main_content():
     return html.Div([
-        # Level 2: Main Reasoning Path
         dbc.Card([
             dbc.CardHeader(
                 html.Div([
@@ -121,7 +122,7 @@ def create_main_content():
         # Level 3: Token Specifics
         dbc.Card([
             dbc.CardHeader(html.Div(id='level3-instructions', children="Level 3: Token Details"),
-                           className="py-1 small font-weight-bold"),
+                           className=_HEADER_CLASS),
             dbc.CardBody(create_level3_detail(), className="p-1")
         ], style={'height': '31vh'})
     ])

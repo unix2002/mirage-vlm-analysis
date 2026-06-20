@@ -1,6 +1,13 @@
 import pytest
-from dashboard.data_loader import RealDataLoader
+from dashboard.data_loader import RealDataLoader, LOADER
 
+NEEDS_DATA = pytest.mark.skipif(
+    not LOADER.get_data(),
+    reason="no real data loaded"
+)
+
+
+@NEEDS_DATA
 def test_data_enrichment():
     loader = RealDataLoader()
     data = loader.get_data()

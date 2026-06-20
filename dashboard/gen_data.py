@@ -1,16 +1,12 @@
-"""Free-run reroute data (regen_gen output).
+"""Free-run reroute data: per sample, per ablation subset, shows whether the
+model's plan changed vs the clean free-run plan.
 
-Per sample, per ablation subset: the greedily generated plan and whether it
-changed vs the clean free-run plan. Lets the dashboard show, when an ablation
-reroutes the model's plan, the new plan in red.
-
-Files (jsonl, one record per sample, keyed by int sample_id):
-  data/test_plans_gen.jsonl   -> test_NNN samples
-  data/train_plans_gen.jsonl  -> sample_NNN samples
-"""
+Files: data/train_plans_gen.jsonl, data/test_plans_gen.jsonl"""
 import json
 import logging
 from pathlib import Path
+
+from .callbacks.ablation_v2 import mask_for_ranks
 
 TEST_GEN_PATH = Path('data/test_plans_gen.jsonl')
 TRAIN_GEN_PATH = Path('data/train_plans_gen.jsonl')
@@ -49,11 +45,6 @@ def _entry(sample_id):
         return None
 
 
-def _mask(ranks, n):
-    rs = set(ranks)
-    return ''.join('1' if i in rs else '0' for i in range(n))
-
-
 _flippers = None
 
 
@@ -81,7 +72,7 @@ def reroute_plan(sample_id, ablated_ranks):
     if not e:
         return None
     n = e.get('n', 6)
-    s = e.get('subsets', {}).get(_mask(ablated_ranks, n))
+    s = e.get('subsets', {}).get(mask_for_ranks(ablated_ranks, n))
     if s and s.get('evaluated') and s.get('changed'):
         return e.get('clean_plan_gen') or [], s.get('ablated_plan_gen') or []
     return None

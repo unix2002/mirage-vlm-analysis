@@ -12,6 +12,35 @@ except ImportError:
 
 from mirage_vlm.utils.maze_renderer import generate_maze_traces
 
+_DIRECTION_COLORS = {
+    'UP': 'rgba(31, 119, 180, 0.15)',
+    'DOWN': 'rgba(255, 127, 14, 0.15)',
+    'LEFT': 'rgba(44, 160, 44, 0.15)',
+    'RIGHT': 'rgba(214, 39, 40, 0.15)',
+    'UNKNOWN': 'rgba(127, 127, 127, 0.1)',
+}
+
+_HOVER_TEMPLATE = (
+    "<b>%{text}</b><br>"
+    "Predicted: %{customdata[0]}<br>"
+    "Correct: %{customdata[1]}<br>"
+    "Avg KL Div: %{customdata[2]:.2f}<br>"
+    "Seq Len: %{customdata[3]}<br>"
+    "Level: %{customdata[4]}<br>"
+    "Projection Error: %{customdata[5]:.4f}<br>"
+)
+
+
+def _compute_y_stretch(viewport, df):
+    """Compute y-stretch factor to preserve maze aspect ratio."""
+    if viewport:
+        vp_w = viewport['x_max'] - viewport['x_min']
+        vp_h = viewport['y_max'] - viewport['y_min']
+    else:
+        vp_w = df['umap_x'].max() - df['umap_x'].min()
+        vp_h = df['umap_y'].max() - df['umap_y'].min()
+    return (vp_w / vp_h) / 0.74 if vp_h > 0 else 1.0
+
 
 def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, viewport=None, highlight_flippers=False):
     if not data_source:
@@ -100,20 +129,11 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
     color_title = metric_labels.get(color_metric, color_metric)
 
 
-    # 2. Build Scientific Figure
+    # Add Cluster Boundaries (Convex Hulls)
     fig = go.Figure()
 
-    # Add Cluster Boundaries (Convex Hulls)
     if HAS_SCIPY and len(df) > 5 and zoom_level < 3.0:
-        colors = {
-            'UP': 'rgba(31, 119, 180, 0.15)',    # Blue
-            'DOWN': 'rgba(255, 127, 14, 0.15)',  # Orange
-            'LEFT': 'rgba(44, 160, 44, 0.15)',   # Green
-            'RIGHT': 'rgba(214, 39, 40, 0.15)',  # Red
-            'UNKNOWN': 'rgba(127, 127, 127, 0.1)'# Gray
-        }
-
-        for direction, color in colors.items():
+        for direction, color in _DIRECTION_COLORS.items():
             subset = df[df['move_direction'] == direction]
             if len(subset) > 2:
                 points = subset[['umap_x', 'umap_y']].values
@@ -205,16 +225,7 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
             text=df['sample_id'],
             hovertext=df['sample_id'],
             customdata=df[['move_direction', 'correctness', 'avg_kl', 'seq_len', 'level_id', 'umap_uncertainty']],
-            hovertemplate=(
-                "<b>%{text}</b><br>" +
-                "Predicted: %{customdata[0]}<br>" +
-                "Correct: %{customdata[1]}<br>" +
-                "Avg KL Div: %{customdata[2]:.2f}<br>" +
-                "Seq Len: %{customdata[3]}<br>" +
-                "Level: %{customdata[4]}<br>" +
-                "Projection Error: %{customdata[5]:.4f}<br>" +
-                "<extra></extra>"
-            )
+            hovertemplate=_HOVER_TEMPLATE + "<extra></extra>"
         ))
 
     if highlight_flippers and macro_opacity > 0:
@@ -243,22 +254,9 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
         all_start_x, all_start_y = [], []
         all_end_x, all_end_y = [], []
 
-        # Dynamic scaling: at zoom 15.0, scale is small, grows as you zoom in
-        # We want the mazes to stay relatively consistent in screen space and prevent clashing
+        # Dynamic scaling: keep mazes consistent on screen, prevent clashing
         base_scale = 3.0 / max(1.0, zoom_level)
-
-        # Calculate y_stretch
-        y_stretch = 1.0
-        if viewport:
-            vp_w = viewport['x_max'] - viewport['x_min']
-            vp_h = viewport['y_max'] - viewport['y_min']
-            if vp_h > 0:
-                y_stretch = (vp_w / vp_h) / 0.74 # 0.74 is est. plot aspect ratio
-        else:
-            vp_w = df['umap_x'].max() - df['umap_x'].min()
-            vp_h = df['umap_y'].max() - df['umap_y'].min()
-            if vp_h > 0:
-                y_stretch = (vp_w / vp_h) / 0.74
+        y_stretch = _compute_y_stretch(viewport, df)
 
         for _, row in df.iterrows():
             traces = generate_maze_traces(
@@ -278,7 +276,7 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
             all_end_x.extend(traces['end_x'])
             all_end_y.extend(traces['end_y'])
 
-        # 1. Background Grid (Light Gray Lines)
+        # Background Grid
         if all_grid_x:
             fig.add_trace(go.Scatter(
                 x=all_grid_x, y=all_grid_y,
@@ -289,7 +287,7 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
                 name='Maze Grid'
             ))
 
-        # 2. The Path (Bold Red Line)
+        # Solution Path
         if all_path_x:
             fig.add_trace(go.Scatter(
                 x=all_path_x, y=all_path_y,
@@ -300,7 +298,7 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
                 name='Solution Path'
             ))
 
-        # 3. Start Points (Blue)
+        # Start Points
         if all_start_x:
             fig.add_trace(go.Scatter(
                 x=all_start_x, y=all_start_y,
@@ -312,7 +310,7 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
                 unselected=dict(marker=dict(opacity=1))
             ))
 
-        # 4. End Points (Green)
+        # End Points
         if all_end_x:
             fig.add_trace(go.Scatter(
                 x=all_end_x, y=all_end_y,
@@ -324,7 +322,7 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
                 unselected=dict(marker=dict(opacity=1))
             ))
 
-        # 5. Invisible Hover Targets (Since grid/path skip hover)
+        # Invisible hover targets (grid/path skip hoverinfo)
         fig.add_trace(go.Scatter(
             x=df['umap_x'],
             y=df['umap_y'],
@@ -333,17 +331,7 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
             text=df['sample_id'],
             hovertext=df['sample_id'],
             customdata=df[['move_direction', 'correctness', 'avg_kl', 'seq_len', 'level_id', 'umap_uncertainty']],
-            hovertemplate=(
-                "<b>%{text}</b><br>" +
-                "Predicted: %{customdata[0]}<br>" +
-                "Correct: %{customdata[1]}<br>" +
-                "Avg KL Div: %{customdata[2]:.2f}<br>" +
-                "Seq Len: %{customdata[3]}<br>" +
-                "Level: %{customdata[4]}<br>" +
-                "Projection Error: %{customdata[5]:.4f}<br>" +
-                "<b>[Micro-Maze View]</b><br>" +
-                "<extra></extra>"
-            ),
+            hovertemplate=_HOVER_TEMPLATE + "<b>[Micro-Maze View]</b><br><extra></extra>",
             showlegend=False,
             name='Maze Hover'
         ))
