@@ -13,7 +13,7 @@ except ImportError:
 from mirage_vlm.utils.maze_renderer import generate_maze_traces
 
 
-def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, viewport=None):
+def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, viewport=None, highlight_flippers=False):
     if not data_source:
         return dcc.Graph(id='level1-scatter', figure=go.Figure().update_layout(title="No Data Available"))
 
@@ -24,9 +24,7 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
     # so that the colorbar remains static during zoom.
     global_color_vals = []
     for s in data_source:
-        if color_metric == 'correctness':
-            global_color_vals.append(int(s.get('correctness', False)))
-        elif color_metric == 'avg_kl':
+        if color_metric == 'avg_kl':
             global_color_vals.append(np.mean([t['kl_divergence'] for t in s['tokens']]))
         elif color_metric in s:
             global_color_vals.append(s[color_metric])
@@ -66,11 +64,18 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
             'level_id': s.get('level_id', 0),
             'seq_len': s.get('seq_len', 0),
             'num_latent': s.get('num_latent', 6),
+            'has_plan_flip': s.get('has_plan_flip', False),
             'map_desc': s.get('map_desc'),
             'full_path': s.get('full_path')
         })
 
     df = pd.DataFrame(rows)
+
+    # Mark plan-flippers from the free-run reroute data (regen_gen). Only loaded
+    # when the highlight is on. Matches by namespaced id ('sample_NNN'/'test_NNN').
+    if highlight_flippers and 'sample_id' in df.columns and len(df):
+        from ..gen_data import flipper_ids
+        df['has_plan_flip'] = df['sample_id'].isin(flipper_ids())
 
     if len(df) == 0:
         return go.Figure()
@@ -87,7 +92,6 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
     # Resolve Color Metric Label
     metric_labels = {
         'avg_kl': 'Reasoning Intensity',
-        'correctness': 'Correctness',
         'level_id': 'Level ID',
         'seq_len': 'Seq Length',
         'num_latent': 'Latent Tokens',
@@ -146,13 +150,8 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
     else:
         aura_opacity = 0.15 * macro_opacity
 
-    # Ensure correctness is numeric for coloring if selected
-    if color_metric == 'correctness':
-        color_data = df['correctness'].astype(int)
-        colorscale = [[0, '#e74c3c'], [1, '#2ecc71']] # Red to Green
-    else:
-        color_data = df[color_metric]
-        colorscale = 'Viridis'
+    color_data = df[color_metric]
+    colorscale = 'Viridis'
 
     if show_macro:
         # Add the Uncertainty Aura trace (behind main points)
@@ -217,6 +216,25 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
                 "<extra></extra>"
             )
         ))
+
+    if highlight_flippers and macro_opacity > 0:
+        flip_df = df[df['has_plan_flip'] == True]
+        if len(flip_df) > 0:
+            fig.add_trace(go.Scatter(
+                x=flip_df['umap_x'],
+                y=flip_df['umap_y'],
+                mode='markers',
+                marker=dict(
+                    size=flip_df['velocity_size'] + 10,
+                    symbol='circle-open',
+                    color='#dc3545',
+                    opacity=0.6 * macro_opacity,
+                    line=dict(width=2),
+                ),
+                hoverinfo='skip',
+                showlegend=False,
+                name='Plan Flippers',
+            ))
 
     if show_micro:
         # Generate batch traces for all visible mazes

@@ -10,10 +10,11 @@ def register_level1_callbacks(app):
          Input('umap-dist-slider', 'value'),
          Input('umap-pca-toggle', 'value'),
          Input('umap-color-dropdown', 'value'),
+         Input('umap-flippers-toggle', 'value'),
          Input('level1-scatter', 'relayoutData')],
         [State('level1-scatter', 'figure')]
     )
-    def update_umap(n_neighbors, min_dist, use_pca, color_metric, relayout_data, current_fig):
+    def update_umap(n_neighbors, min_dist, use_pca, color_metric, highlight_flippers, relayout_data, current_fig):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
         
@@ -25,7 +26,7 @@ def register_level1_callbacks(app):
             # Check for autorange (double click to reset)
             if 'xaxis.autorange' in relayout_data:
                 # Reset to macro view
-                return create_level1_landscape(LOADER.get_data(), color_metric=color_metric, zoom_level=1.0)
+                return create_level1_landscape(LOADER.get_data(), color_metric=color_metric, zoom_level=1.0, highlight_flippers=highlight_flippers)
             
             # Check if it's an actual zoom (we have specific axis ranges)
             if 'xaxis.range[0]' in relayout_data and 'xaxis.range[1]' in relayout_data:
@@ -49,7 +50,8 @@ def register_level1_callbacks(app):
                     LOADER.get_data(), 
                     color_metric=color_metric, 
                     zoom_level=zoom_level,
-                    viewport=viewport
+                    viewport=viewport,
+                    highlight_flippers=highlight_flippers
                 )
                 
                 # Restore the exact layout ranges so the zoom doesn't reset or jump
@@ -65,7 +67,7 @@ def register_level1_callbacks(app):
 
         # Otherwise (parameter sliders changed), recompute everything from scratch
         updated_data = LOADER.recompute_umap(n_neighbors, min_dist, use_pca=use_pca)
-        new_fig = create_level1_landscape(updated_data, color_metric=color_metric, zoom_level=1.0)
+        new_fig = create_level1_landscape(updated_data, color_metric=color_metric, zoom_level=1.0, highlight_flippers=highlight_flippers)
         
         return new_fig
 

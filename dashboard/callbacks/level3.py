@@ -15,11 +15,11 @@ def _build_level3_content(fig_heatmap, fig_bar, fig_curve, layer_value=26):
     return html.Div([
         dbc.Row([
             dbc.Col(dcc.Graph(id='token-detail-heatmap', figure=fig_heatmap,
-                    style={'height': '30vh'}), width=4),
+                    style={'height': '26vh'}), width=4),
             dbc.Col(dcc.Graph(id='token-detail-probe-bar', figure=fig_bar,
-                    style={'height': '30vh'}), width=4),
+                    style={'height': '26vh'}), width=4),
             dbc.Col(dcc.Graph(id='token-detail-dependency-curve', figure=fig_curve,
-                    style={'height': '30vh'}), width=4),
+                    style={'height': '26vh'}), width=4),
         ], className="g-0"),
         dbc.Row([
             dbc.Col(dcc.Slider(
@@ -71,6 +71,7 @@ def update_level3_logic(token_clicks, clickData, triggered_id_full):
     n = grid.shape[0]
     fig_heatmap.update_layout(
         coloraxis_showscale=True,
+        coloraxis_colorbar=dict(thickness=8, len=0.5, outlinewidth=0),
         xaxis=dict(title="Column"),
         yaxis=dict(title="Row",
                    tickvals=[0, n // 2, n - 1],
@@ -147,7 +148,7 @@ def register_level3_callbacks(app):
         return content, text, store_data
 
     @app.callback(
-        Output('level3-detail-content', 'children', allow_duplicate=True),
+        Output('token-detail-heatmap', 'figure', allow_duplicate=True),
         [Input('layer-slider', 'value')],
         [State('current-token-state', 'data')],
         prevent_initial_call=True,
@@ -157,7 +158,6 @@ def register_level3_callbacks(app):
             return dash.no_update
         sid = token_state.get('sample_id')
         token_id = token_state.get('token_id', 'T0')
-        token_rank = token_state.get('token_rank', 0)
         token_idx = int(token_id[1:]) if token_id.startswith('T') else 0
         grid = get_layer_heatmap(sid, token_idx, layer)
         if grid is None:
@@ -169,33 +169,11 @@ def register_level3_callbacks(app):
         fig_heatmap.update_layout(
             margin=dict(l=5, r=5, t=20, b=5),
             coloraxis_showscale=True,
+            coloraxis_colorbar=dict(thickness=8, len=0.5, outlinewidth=0),
             xaxis=dict(title="Column"),
             yaxis=dict(title="Row",
                        tickvals=[0, n // 2, n - 1],
                        ticktext=[str(n - 1), str(n // 2), "0"]),
             title=dict(text=f"RQ1: Spatial Focus ({token_id}, layer {layer})", font=dict(size=10)),
         )
-
-        # Rebuild bar
-        dirs = ['UP', 'DOWN', 'LEFT', 'RIGHT']
-        move_dir = token_state.get('move_direction', 'UP')
-        base = max(0.0, min(1.0, float(token_state.get('probe_accuracy', 0.25))))
-        off_value = max(0.0, min(1.0, base * 0.35))
-        accs = [base if d == move_dir else off_value for d in dirs]
-        fig_bar = px.bar(x=dirs, y=accs, labels={'x': 'Direction', 'y': 'Probe Accuracy'})
-        _style_detail_fig(fig_bar, f"RQ2: Directional Probe Accuracy (Token {token_id})")
-        fig_bar.update_layout(
-            yaxis=dict(range=[0, 1], tickfont=dict(size=8)),
-            xaxis=dict(tickfont=dict(size=8)))
-
-        # Rebuild curve
-        kl_div = token_state.get('kl_divergence', 0.0)
-        kls = [kl_div * (0.82 ** s) for s in range(10)]
-        x = list(range(10))
-        fig_curve = px.line(x=x, y=kls, labels={'x': 'Position', 'y': 'KL Divergence (synthetic decay)'})
-        _style_detail_fig(fig_curve, f"RQ3: Per-Position KL after Zeroing Token {token_id}")
-        fig_curve.update_layout(
-            xaxis=dict(tickfont=dict(size=8)),
-            yaxis=dict(tickfont=dict(size=8)))
-
-        return _build_level3_content(fig_heatmap, fig_bar, fig_curve, layer_value=layer)
+        return fig_heatmap

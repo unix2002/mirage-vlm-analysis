@@ -24,6 +24,29 @@ except ImportError:
     HAS_UMAP = False
     logging.warning("umap-learn is not installed. Clustering projections will fail.")
 
+def _enrich_has_plan_flip(data_dir, processed):
+    """Set has_plan_flip=True on samples where any ablation combo changes the plan."""
+    if not data_dir or not processed:
+        return
+    path = os.path.join(data_dir, 'train_plans_gen.jsonl')
+    if not os.path.exists(path):
+        return
+    try:
+        has_flip = {}
+        with open(path, 'r') as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                entry = json.loads(line)
+                subsets = entry.get('subsets', {})
+                if any(s.get('changed') for s in subsets.values()):
+                    has_flip[str(entry.get('sample_id', ''))] = True
+        for s in processed:
+            key = s['sample_id'].replace('sample_', '').lstrip('0') or '0'
+            s['has_plan_flip'] = has_flip.get(str(int(key) if key.isdigit() else key), False)
+    except Exception as e:
+        logging.warning(f"Failed to compute plan-flip flag: {e}")
+
 class RealDataLoader:
     def __init__(self, data_dir=None):
         self.data_dir = None
@@ -254,6 +277,9 @@ class RealDataLoader:
                 })
             except Exception as e:
                 logging.warning(f"Failed processing sample {i}: {e}")
+
+        # Compute per-sample plan-change flag from train_plans_gen.jsonl
+        _enrich_has_plan_flip(self.data_dir, processed)
 
         # Cache hidden states
         if len(all_hidden_states) > 5:

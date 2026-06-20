@@ -61,13 +61,19 @@ def create_sidebar():
                     className="small text-muted mb-2"
                 ),
 
+                dbc.Checkbox(
+                    id="umap-flippers-toggle",
+                    label="Highlight Plan Flippers",
+                    value=False,
+                    className="small text-muted mb-2"
+                ),
+
                 html.Div([
                     html.Label("Color Metric", className="small text-muted mb-0"),
                     dcc.Dropdown(
                         id='umap-color-dropdown',
                         options=[
                             {'label': 'Reasoning Intensity (KL)', 'value': 'avg_kl'},
-                            {'label': 'Correctness', 'value': 'correctness'},
                             {'label': 'Level ID', 'value': 'level_id'},
                             {'label': 'Sequence Length', 'value': 'seq_len'},
                             {'label': 'Num Latent Tokens', 'value': 'num_latent'},
@@ -89,7 +95,7 @@ def create_main_content():
         dbc.Card([
             dbc.CardHeader(
                 html.Div([
-                    html.Span("Level 2: Reasoning Path Analysis", className="align-self-center small font-weight-bold"),
+                    html.Span("Level 2: Reasoning Path Analysis", id='level2-header-title', className="align-self-center small font-weight-bold"),
                     dbc.RadioItems(
                         id='level2-tab-selector',
                         options=[

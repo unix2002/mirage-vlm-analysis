@@ -79,16 +79,22 @@ def _kl_fingerprint(sample_id, ablated_ranks):
     def _cell(c):
         alpha = 0.12 + 0.88 * (c['kl'] / max_kl)
         selected = cur_mask is not None and c['mask'] == cur_mask
+        changed = c.get('changed', False)
         label = '+'.join('T' + str(r) for r in c['ranks'])
+        border_color = '#eab308' if selected else ('#dc3545' if changed else 'transparent')
+        hover = f"{label}  ·  KL {c['kl']:.5f}"
+        if changed:
+            hover += '  ·  plan changed'
+        hover += '  ·  click to ablate this set'
         return html.Div(
             [_dot(i in c['ranks']) for i in range(n)],
             id={'type': 'fingerprint-cell', 'mask': c['mask']}, n_clicks=0,
-            title=f"{label}  ·  KL {c['kl']:.5f}  ·  click to ablate this set",
+            title=hover,
             style={
                 'display': 'flex', 'gap': '1px', 'justifyContent': 'center', 'alignItems': 'center',
                 'padding': '3px 2px', 'borderRadius': '3px', 'cursor': 'pointer',
                 'backgroundColor': f'rgba(6,182,212,{alpha:.3f})',
-                'border': f"1.5px solid {'#eab308' if selected else 'transparent'}",
+                'border': f'1.5px solid {border_color}',
             })
 
     columns = []
@@ -108,7 +114,7 @@ def _kl_fingerprint(sample_id, ablated_ranks):
             'fontSize': '0.5rem', 'color': '#888', 'textTransform': 'uppercase',
             'letterSpacing': '0.08em', 'padding': '2px 4px 1px',
         }),
-        html.Div('shade = KL · dots = latent tokens zeroed (T0–T5) · hover for value', style={
+        html.Div('shade = KL · dots = tokens zeroed (T0–T5) · red = plan changed · hover for value', style={
             'fontSize': '0.42rem', 'color': '#aaa', 'padding': '0 4px 4px',
         }),
         html.Div(columns, style={
@@ -340,10 +346,12 @@ def _dose_response_graph(sample_id, ablated_ranks):
                              hovertemplate='zero %{x} tokens<br>median KL %{y:.4f}<extra></extra>'))
     fig.add_trace(go.Scatter(x=ks, y=[r['em_flip_pct'] for r in rows], mode='lines', yaxis='y2',
                              line=dict(color='#dc3545', width=1.5, dash='dash'),
-                             hovertemplate='text flip %{y:.0f}%<extra></extra>'))
+                             hovertemplate='text flip %{y:.0f}%<extra></extra>',
+                             name='text flip', showlegend=True))
     fig.add_trace(go.Scatter(x=ks, y=[r['plan_flip_pct'] for r in rows], mode='lines', yaxis='y2',
                              line=dict(color='#94a3b8', width=1.5, dash='dot'),
-                             hovertemplate='plan flip %{y:.0f}%<extra></extra>'))
+                             hovertemplate='plan flip %{y:.0f}%<extra></extra>',
+                             name='plan flip', showlegend=True))
 
     cur = current_combo_metrics(sample_id, ablated_ranks)
     if cur:
@@ -354,7 +362,9 @@ def _dose_response_graph(sample_id, ablated_ranks):
 
     fig.update_layout(
         margin=dict(l=30, r=28, t=6, b=18), font=dict(size=8),
-        hovermode='x unified', showlegend=False, paper_bgcolor='rgba(0,0,0,0)',
+        hovermode='x unified', paper_bgcolor='rgba(0,0,0,0)',
+        legend=dict(orientation='v', x=1, y=1, xanchor='left', yanchor='top',
+                    font=dict(size=7), bgcolor='rgba(255,255,255,0.7)'),
         xaxis=dict(title=dict(text='latent tokens zeroed', font=dict(size=8)),
                    dtick=1, tickfont=dict(size=7)),
         yaxis=dict(title=dict(text='KL', font=dict(size=8)), tickfont=dict(size=7), rangemode='tozero'),
@@ -365,12 +375,13 @@ def _dose_response_graph(sample_id, ablated_ranks):
         html.Div(dcc.Graph(figure=fig, config={'displayModeBar': False},
                            style={'height': '100%', 'width': '100%'}),
                  style={'flex': 1, 'minHeight': 0, 'overflow': 'hidden'}),
-    ], style={'height': '29vh', 'display': 'flex',
+    ], style={'height': '32vh', 'display': 'flex',
               'flexDirection': 'column', 'padding': '0 4px'})
 
 
-def _flip_status_bar(cur):
-    """Compact visual bar showing KL intensity + flip badges for the current combo."""
+def _flip_status_bar(sample_id, ablated_ranks):
+    """Compact visual bar showing KL intensity + plan-flip badge for the current combo."""
+    cur = current_combo_metrics(sample_id, ablated_ranks)
     if not cur:
         return None
 
@@ -388,27 +399,31 @@ def _flip_status_bar(cur):
     bar_color = '#eab308' if cur['kl'] > 0.005 else '#06b6d4'
 
     return html.Div([
-        html.Div(f"zero {cur['k']} tokens", style={
+        html.Div(f"zeroed out {cur['k']} tokens", style={
             'fontSize': '0.6rem', 'color': '#475569', 'fontFamily': 'monospace',
             'fontWeight': 'bold', 'whiteSpace': 'nowrap',
             'marginRight': '8px',
         }),
-        html.Div('KL', style={
-            'fontSize': '0.5rem', 'color': '#888', 'fontFamily': 'monospace',
-            'textTransform': 'uppercase', 'marginRight': '4px',
+        html.Div([
+            html.Div('KL', style={
+                'fontSize': '0.45rem', 'color': '#888', 'fontFamily': 'monospace',
+                'textTransform': 'uppercase',
+            }),
+            html.Span(f"{cur['kl']:.6f}", style={
+                'fontSize': '0.55rem', 'color': bar_color, 'fontFamily': 'monospace',
+                'fontWeight': 'bold',
+            }),
+            html.Div(style={
+                'width': '80px', 'height': '8px', 'backgroundColor': '#f0f0f0',
+                'borderRadius': '3px', 'overflow': 'hidden',
+            }, children=[html.Div(style={
+                'width': f'{kl_frac * 100:.0f}%', 'height': '100%',
+                'backgroundColor': bar_color, 'borderRadius': '3px',
+            })]),
+        ], style={
+            'display': 'flex', 'flexDirection': 'column', 'alignItems': 'center',
+            'gap': '1px', 'flex': 1, 'maxWidth': '80px',
         }),
-        html.Div(style={
-            'flex': 1, 'height': '8px', 'backgroundColor': '#f0f0f0',
-            'borderRadius': '3px', 'overflow': 'hidden', 'maxWidth': '80px',
-        }, children=[html.Div(style={
-            'width': f'{kl_frac * 100:.0f}%', 'height': '100%',
-            'backgroundColor': bar_color, 'borderRadius': '3px',
-        })]),
-        html.Span(f"{cur['kl']:.6f}", style={
-            'fontSize': '0.55rem', 'color': bar_color, 'fontFamily': 'monospace',
-            'fontWeight': 'bold', 'marginLeft': '6px', 'marginRight': '12px',
-        }),
-        _badge('text ' + ('flipped' if cur['em_flipped'] else 'stable'), cur['em_flipped']),
         _badge('plan ' + ('flipped' if cur['plan_flipped'] else 'stable'), cur['plan_flipped']),
     ], style={
         'display': 'flex', 'alignItems': 'center', 'flexWrap': 'wrap', 'gap': '6px',
@@ -447,20 +462,10 @@ def _ablated_plan_row(sample_id, ablated_ranks):
 
 
 def _render_output_panel(sample_id, ablated_ranks, show_strip=False):
-    """Token ablation buttons + dose-response graph + flip status bar for the ablation tab."""
-    children = []
-    if show_strip:
-        children.append(html.Div(_token_contribution_strip(sample_id, ablated_ranks),
-                                 style={'flexShrink': 0}))
-        cur = current_combo_metrics(sample_id, ablated_ranks)
-        bar = _flip_status_bar(cur)
-        children.append(html.Div([
-            _dose_response_graph(sample_id, ablated_ranks),
-            bar if bar else None,
-        ], style={'flex': 1, 'minWidth': 0, 'display': 'flex',
-                  'flexDirection': 'column', 'overflow': 'hidden'}))
-    return html.Div(children,
-                    style={'display': 'flex', 'flexDirection': 'row', 'height': '100%'})
+    """Dose-response graph for the ablation tab."""
+    if not show_strip:
+        return html.Div()
+    return _dose_response_graph(sample_id, ablated_ranks)
 
 
 def update_level2_logic(clickData):
@@ -476,12 +481,18 @@ def update_level2_logic(clickData):
 def register_level2_callbacks(app):
     @app.callback(
         [Output('level2-maze-pane', 'children'),
-         Output('ablation-state', 'data')],
+         Output('ablation-state', 'data'),
+         Output('level2-header-title', 'children')],
         [Input('level1-scatter', 'clickData')]
     )
     def update_level2(clickData):
         a = update_level2_logic(clickData)
-        return a, {'ablated_ranks': []}
+        if clickData:
+            sample_id = clickData['points'][0]['hovertext']
+            title = f"Level 2: Reasoning Path Analysis — {sample_id}"
+        else:
+            title = "Level 2: Reasoning Path Analysis"
+        return a, {'ablated_ranks': []}, title
 
     @app.callback(
         Output('level2-kl-pane', 'children'),
@@ -505,8 +516,6 @@ def register_level2_callbacks(app):
          Input('level2-tab-selector', 'value')]
     )
     def update_probing_pane(clickData, active_tab):
-        if active_tab != 'probing':
-            return html.Div()
         if not clickData:
             return html.Div("Select a Sample (Level 1)", style={
                 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center',
@@ -514,6 +523,8 @@ def register_level2_callbacks(app):
                 'textTransform': 'uppercase', 'letterSpacing': '0.05em',
                 'padding': '8px',
             })
+        if active_tab != 'probing':
+            return html.Div()
         sample_id = clickData['points'][0]['hovertext']
         return html.Div([
             dcc.Graph(id='rq2-dynamic-grid',
@@ -595,7 +606,7 @@ def register_level2_callbacks(app):
     )
     def update_output_pane(clickData, ablation_state, active_tab):
         if not clickData:
-            return html.Div("Select a Sample (Level 1)", className="p-2 text-muted small") if active_tab == 'ablation' else html.Div()
+            return html.Div()
         sample_id = clickData['points'][0]['hovertext']
         ablated = (ablation_state or {}).get('ablated_ranks', [])
         return _render_output_panel(sample_id, ablated, show_strip=(active_tab == 'ablation'))

@@ -39,24 +39,29 @@ def build_rq2_static_bar(probe_results=None):
             x=[str(layer) for layer in layers],
             y=y,
             name="Concat Probe Accuracy",
-            marker_color="#1f77b4",
+            marker_color="#67e8f9",
             text=[f"{v:.3f}" for v in y],
             textposition="outside",
         )
     )
-    fig.add_hline(
-        y=chance,
-        line_dash="dash",
-        line_color="#b22222",
-        annotation_text=f"Chance = {chance:.3f}",
-        annotation_position="top left",
+    fig.add_trace(
+        go.Scatter(
+            x=[str(layers[0]), str(layers[-1])],
+            y=[chance, chance],
+            mode='lines',
+            line=dict(dash='dash', color='#b22222', width=1.5),
+            hovertemplate=f'Chance = {chance:.3f}<extra></extra>',
+            name='chance',
+            showlegend=True,
+            hoverlabel=dict(bgcolor='#b22222'),
+        )
     )
     fig.update_layout(
         title=dict(text="RQ2: Layer-wise Decodability (Global)", font=dict(size=12)),
         xaxis_title="Layer",
         yaxis_title="Accuracy",
         template="plotly_white",
-        height=243,
+        height=324,
         margin=dict(l=40, r=20, t=40, b=40)
     )
     return fig
@@ -95,7 +100,7 @@ def build_rq2_dynamic_grid(sample_id, layer=26, per_sample_payload=None):
     for step in range(max_steps):
         true_dir = true_moves[step] if step < len(true_moves) else "n/a"
         true_dirs.append(true_dir)
-        row_labels.append(f"Step {step + 1}")
+        row_labels.append(str(step + 1))
 
         row_mu = []
         row_sigma = []
@@ -172,7 +177,7 @@ def build_rq2_dynamic_grid(sample_id, layer=26, per_sample_payload=None):
     ))
 
     fig.update_layout(
-        title=dict(text=f"RQ2: Decodability Grid (Sample {sample_id})", font=dict(size=12)),
+        title=dict(text="RQ2: Decodability Grid", font=dict(size=12)),
         xaxis_title="Direction",
         yaxis_title="Sequence Step",
         template="plotly_white",

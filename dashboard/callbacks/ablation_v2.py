@@ -5,7 +5,7 @@ ABLATION_V2_DIR = Path('data/ablation_v2')
 RESULTS_PATH = Path('data/ablation_results.json')
 COMBOS_ALL6_PATH = Path('data/ablation_v2/subsets.json')
 ABLATED_PLANS_DIR = ABLATION_V2_DIR / 'ablated_plans'
-ABLATED_PLANS_DIST_PATH = Path('data/ablated_plans_dist.jsonl')
+ABLATED_PLANS_DIST_PATH = Path('data/train_plans_gen.jsonl')
 
 _results_cache = None
 _combos_all6_cache = None
@@ -127,7 +127,11 @@ def build_bitmask(sample_id, ablated_ranks):
 
 
 def load_ablated_plans(sample_id):
-    """Return parsed ablated_plans file for sample_id, or None."""
+    """Return parsed ablated_plans for sample_id, or None.
+    
+    Prefers the non-teacher-forced gen data from the dist file when available;
+    falls back to individual sample JSONs.
+    """
     sid = int(_fmt_sample_id(sample_id))
     cache = _load_ablated_plans_dist()
     if cache and sid in cache:
@@ -146,7 +150,9 @@ def load_clean_plan(sample_id):
     plans = load_ablated_plans(sample_id)
     if plans is None:
         return None
-    return plans.get('clean_plan')
+    return (plans.get('clean_plan_gen')
+            or plans.get('clean_plan_tf')
+            or plans.get('clean_plan'))
 
 
 def load_visual_zero_kl(sample_id):
@@ -387,5 +393,6 @@ def subset_lattice(sample_id):
             'k': mask.count('1'),
             'kl': kl,
             'ranks': [i for i, b in enumerate(mask) if b == '1'],
+            'changed': bool(s.get('changed')),
         })
     return {'cells': cells, 'max_kl': max_kl, 'n': n}
