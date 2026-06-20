@@ -2,12 +2,8 @@
 # Download data files for Mirage VLM dashboard.
 # Usage: bash scripts/setup_data.sh
 #
-# Downloads from GitHub Releases:
-#   data/processed/attn_full.npz       (~38 MB, per-layer attention cache)
-#   data/metadata.json                 (~2.7 MB, sample index)
-#
-# Optional (for maze overlays in Level 1 micro view):
-#   data/vsp_spatial_planning.tar.gz   (~42 MB)
+# Downloads ~83 MB from GitHub Releases. Run once after cloning.
+# All files are skipped if already present (idempotent).
 #
 # Set MIRAGE_DATA_URL to override the base URL.
 
@@ -18,17 +14,32 @@ DATA_DIR="${1:-data}"
 
 mkdir -p "$DATA_DIR/processed"
 
-echo "Downloading attention cache (38 MB)..."
-curl -L -o "$DATA_DIR/processed/attn_full.npz" "$BASE_URL/attn_full.npz" --progress-bar
-echo "Done."
+# 1. Attention cache — enables per-layer heatmap slider & spatial focus
+if [ ! -f "$DATA_DIR/processed/attn_full.npz" ]; then
+    echo "Downloading attention cache (38 MB)..."
+    curl -L -o "$DATA_DIR/processed/attn_full.npz" "$BASE_URL/attn_full.npz"
+    echo "Done."
+else
+    echo "Attention cache already present, skipping."
+fi
 
+# 2. Sample metadata — required for dashboard to load any data
 if [ ! -f "$DATA_DIR/metadata.json" ]; then
     echo "Downloading metadata.json (2.7 MB)..."
-    curl -L -o "$DATA_DIR/metadata.json" "$BASE_URL/metadata.json" --progress-bar
+    curl -L -o "$DATA_DIR/metadata.json" "$BASE_URL/metadata.json"
     echo "Done."
 else
     echo "metadata.json already present, skipping."
 fi
 
+# 3. Maze images — enables Level 1 micro-view maze overlays
+if [ ! -f "$DATA_DIR/vsp_spatial_planning.tar.gz" ]; then
+    echo "Downloading maze images (42 MB)..."
+    curl -L -o "$DATA_DIR/vsp_spatial_planning.tar.gz" "$BASE_URL/vsp_spatial_planning.tar.gz"
+    echo "Done."
+else
+    echo "Maze images already present, skipping."
+fi
+
 echo ""
-echo "Setup complete. Run: python3 run_dashboard.py"
+echo "All data ready. Run: python3 run_dashboard.py"
