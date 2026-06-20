@@ -1,6 +1,5 @@
 import base64
 import json
-import re
 import tarfile
 from pathlib import Path
 from functools import lru_cache
@@ -12,31 +11,12 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import dash_bootstrap_components as dbc
 from ..mock_data import MOCK_DATA
+from .ablation_v2 import load_moves
 
 
 ABLATED_DATA = json.loads(Path('data/ablation_results.json').read_text())
 
 
-def _load_truth_index():
-    truth_path = Path('data/train_direct.jsonl')
-    if not truth_path.exists():
-        return {}
-
-    index = {}
-    for line in truth_path.read_text().splitlines():
-        if not line.strip():
-            continue
-        try:
-            row = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        image_input = row.get('image_input')
-        if image_input:
-            index[image_input] = row
-    return index
-
-
-GROUND_TRUTH_INDEX = _load_truth_index()
 
 
 def _format_metric(value, digits=3):
@@ -156,10 +136,14 @@ def _maze_view(sample):
     ], style={'width': '100%', 'height': '100%', 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center'})
 
 
-def _token_grid(sample):
+def _token_grid(sample, ablated_ranks=None):
+    ablated_ranks = ablated_ranks or []
     tiles = []
     image_src = _load_maze_image(sample.get('metadata', {}).get('image_input'))
     for i, token in enumerate(sample['tokens'][:6]):
+        is_ablated = i in ablated_ranks
+        border_color = '#dc3545' if is_ablated else '#dee2e6'
+        border_width = '3px' if is_ablated else '1px'
         heatmap = go.Figure(data=go.Heatmap(
             z=token['spatial_focus'],
             colorscale='Viridis',
@@ -191,11 +175,17 @@ def _token_grid(sample):
                         figure=heatmap,
                         config={'displayModeBar': False, 'staticPlot': False},
                         style={'height': '100%', 'position': 'relative', 'zIndex': 1, 'backgroundColor': 'transparent'}
-                    )
+                    ),
+                    html.Div('ABLATED', style={
+                        'position': 'absolute', 'top': '2px', 'right': '2px',
+                        'backgroundColor': '#dc3545', 'color': 'white',
+                        'fontSize': '8px', 'padding': '1px 4px', 'borderRadius': '3px',
+                        'zIndex': 3, 'display': 'block' if is_ablated else 'none'
+                    }) if is_ablated else None
                 ], style={
                     'position': 'relative',
                     'height': '14vh',
-                    'border': '1px solid #dee2e6',
+                    'border': f'{border_width} solid {border_color}',
                     'overflow': 'hidden',
                     'borderRadius': '4px',
                     'backgroundColor': '#f8f9fa'
@@ -211,28 +201,97 @@ def _token_grid(sample):
     ])
 
 
+_DIR_GLYPH = {'UP': '↑', 'DOWN': '↓', 'LEFT': '←', 'RIGHT': '→'}
+
+
+def _arrow_span(direction, prob, color):
+    glyph = _DIR_GLYPH.get(direction, '?')
+    if not direction:
+        return html.Div()
+    size = 0.6 + prob * 0.8
+    return html.Div([
+        html.Div(glyph, style={
+            'fontSize': f'{size}rem', 'color': color,
+            'fontWeight': 'bold', 'lineHeight': 1, 'textAlign': 'center'
+        }),
+        html.Div(f'{prob:.3f}', style={
+            'fontSize': '0.55rem', 'color': '#888', 'textAlign': 'center'
+        })
+    ], style={'display': 'flex', 'flexDirection': 'column', 'alignItems': 'center', 'minWidth': '1.5rem'})
+
+
+def _arrow_path_row(directions_probs, color):
+    return html.Div([
+        _arrow_span(d, p, color) for d, p in directions_probs
+    ], style={'display': 'flex', 'flexWrap': 'wrap', 'gap': '2px', 'alignItems': 'center'})
+
+
 def _outputs_panel(sample):
     meta = sample.get('metadata', {})
-    model_output = meta.get('text_output_short') or meta.get('text_output') or 'N/A'
-    truth_row = GROUND_TRUTH_INDEX.get(meta.get('image_input'))
-    true_output = (truth_row or {}).get('text_output') or meta.get('true_output') or meta.get('ground_truth') or 'N/A'
+    sample_id = meta.get('sample_id', sample.get('sample_id'))
 
-    def _clean_output(text):
-        if not text:
-            return 'N/A'
-        text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
-        text = text.replace('<output_image>', '')
-        return text.replace('\\boxed{', '').replace('}', '').strip()
-
-    def _card(title, body):
-        return dbc.Card([
-            dbc.CardHeader(title, className='py-1 small'),
-            dbc.CardBody(html.Pre(_clean_output(body), className='small mb-0', style={'whiteSpace': 'pre-wrap', 'maxHeight': '4vh', 'overflowY': 'auto'}), className='py-1')
-        ], className='h-100')
+    # Load clean moves from T0 (same for all tokens)
+    moves = load_moves(sample_id, 0)
+    if moves:
+        clean_dirs = [(max(m['clean'], key=m['clean'].get), m['clean'][max(m['clean'], key=m['clean'].get)]) for m in moves]
+        gt_dirs = [(m['gt'], 1.0) for m in moves]
+        model_body = _arrow_path_row(clean_dirs, '#3b82f6')
+        true_body = _arrow_path_row(gt_dirs, '#22c55e')
+    else:
+        model_body = html.Pre('N/A', className='small mb-0')
+        true_body = html.Pre('N/A', className='small mb-0')
 
     return dbc.Row([
-        dbc.Col(_card('Model Output', model_output), width=6),
-        dbc.Col(_card('True Output', true_output), width=6),
+        dbc.Col(dbc.Card([
+            dbc.CardHeader('Model Output', className='py-1 small'),
+            dbc.CardBody(model_body, className='py-1 px-2'),
+        ], className='h-100'), width=6),
+        dbc.Col(dbc.Card([
+            dbc.CardHeader('True Output', className='py-1 small'),
+            dbc.CardBody(true_body, className='py-1 px-2'),
+        ], className='h-100'), width=6),
+    ], className='g-0', style={'height': '100%'})
+
+
+def _render_arrow_rows(sample_id, ablated_ranks):
+    if len(ablated_ranks) != 1:
+        return None
+
+    moves = load_moves(sample_id, ablated_ranks[0])
+    if not moves:
+        return None
+
+    clean_dirs = [(max(m['clean'], key=m['clean'].get), m['clean'][max(m['clean'], key=m['clean'].get)]) for m in moves]
+    abl_dirs = [(max(m['ablated'], key=m['ablated'].get), m['ablated'][max(m['ablated'], key=m['ablated'].get)]) for m in moves]
+    gt_dirs = [(m['gt'], 1.0) for m in moves]
+
+    flips = [c[0] != a[0] for c, a in zip(clean_dirs, abl_dirs)]
+    has_flip = any(flips)
+
+    heading = f'Model Output (ablated T{ablated_ranks[0]})'
+    if has_flip:
+        heading += ' ★ FLIP'
+
+    label_clean = html.Div('clean', style={'fontSize': '0.55rem', 'color': '#3b82f6', 'marginRight': '4px'})
+    label_abl = html.Div('abl', style={'fontSize': '0.55rem', 'color': '#ef4444', 'marginRight': '4px'})
+
+    model_body = html.Div([
+        html.Div([label_clean, _arrow_path_row(clean_dirs, '#3b82f6')],
+                 style={'display': 'flex', 'alignItems': 'center'}),
+        html.Div([label_abl, _arrow_path_row(abl_dirs, '#ef4444')],
+                 style={'display': 'flex', 'alignItems': 'center', 'marginTop': '2px'}),
+    ])
+    true_body = _arrow_path_row(gt_dirs, '#22c55e')
+
+    return dbc.Row([
+        dbc.Col(dbc.Card([
+            dbc.CardHeader(heading, className='py-1 small'),
+            dbc.CardBody(model_body, className='py-1 px-2'),
+        ], className='h-100'), width=6),
+        dbc.Col(dbc.Card([
+            dbc.CardHeader('True Output (ground truth)', className='py-1 small'),
+            dbc.CardBody(true_body, className='py-1 px-2'),
+        ], className='h-100'), width=6),
     ], className='g-0', style={'height': '100%'})
 
 
@@ -241,23 +300,53 @@ def update_level2_logic(clickData):
         return (
             html.Div("Select a Sample (Level 1)", className="p-2 text-muted small"),
             html.Div(className='p-2'),
-            html.Div(className='p-2'),
-            html.Div(className='p-2')
         )
 
     sample_id = clickData['points'][0]['hovertext']
     sample = next(s for s in MOCK_DATA if s['sample_id'] == sample_id)
 
-    return _ablation_summary(_ablation_key(sample)), _maze_view(sample), _token_grid(sample), _outputs_panel(sample)
+    return _ablation_summary(_ablation_key(sample)), _maze_view(sample)
 
 
 def register_level2_callbacks(app):
     @app.callback(
         [Output('level2-ablation-pane', 'children'),
          Output('level2-maze-pane', 'children'),
-         Output('level2-token-grid', 'children'),
-         Output('level2-output-pane', 'children')],
+         Output('ablation-state', 'data')],
         [Input('level1-scatter', 'clickData')]
     )
     def update_level2(clickData):
-        return update_level2_logic(clickData)
+        a, b = update_level2_logic(clickData)
+        return a, b, {'ablated_ranks': []}
+
+    @app.callback(
+        Output('level2-token-grid', 'children'),
+        [Input('level1-scatter', 'clickData'),
+         Input('ablation-state', 'data')]
+    )
+    def update_token_grid(clickData, ablation_state):
+        if not clickData:
+            return html.Div(className='p-2')
+        sample_id = clickData['points'][0]['hovertext']
+        sample = next(s for s in MOCK_DATA if s['sample_id'] == sample_id)
+        ablated = (ablation_state or {}).get('ablated_ranks', [])
+        return _token_grid(sample, ablated)
+
+    @app.callback(
+        Output('level2-output-pane', 'children'),
+        [Input('level1-scatter', 'clickData'),
+         Input('ablation-state', 'data')]
+    )
+    def update_output_pane(clickData, ablation_state):
+        if not clickData:
+            return html.Div("Select a Sample (Level 1)", className="p-2 text-muted small")
+        sample_id = clickData['points'][0]['hovertext']
+        sample = next(s for s in MOCK_DATA if s['sample_id'] == sample_id)
+        ablated = (ablation_state or {}).get('ablated_ranks', [])
+
+        if ablated:
+            result = _render_arrow_rows(sample_id, ablated)
+            if result:
+                return result
+
+        return _outputs_panel(sample)
