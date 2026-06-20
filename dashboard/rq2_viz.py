@@ -56,7 +56,7 @@ def build_rq2_static_bar(probe_results=None):
         xaxis_title="Layer",
         yaxis_title="Accuracy",
         template="plotly_white",
-        height=270,
+        height=243,
         margin=dict(l=40, r=20, t=40, b=40)
     )
     return fig
@@ -151,7 +151,7 @@ def build_rq2_dynamic_grid(sample_id, layer=26, per_sample_payload=None):
         z=z_other,
         x=RQ2_GRID_DIRECTIONS,
         y=row_labels,
-        colorscale=[[0, "#fff7f7"], [1, "#e8b4b4"]],
+        colorscale=[[0, "#f0f7ff"], [1, "#93c5fd"]],
         showscale=False,
         xgap=1, ygap=1,
         hoverinfo='skip'
@@ -162,7 +162,7 @@ def build_rq2_dynamic_grid(sample_id, layer=26, per_sample_payload=None):
         z=z_true,
         x=RQ2_GRID_DIRECTIONS,
         y=row_labels,
-        colorscale=[[0, "#f7fcf7"], [1, "#a7dca7"]],
+        colorscale=[[0, "#e0f2fe"], [1, "#06b6d4"]],
         text=text_vals,
         texttemplate="%{text}",
         textfont={"size": 12},
@@ -176,7 +176,7 @@ def build_rq2_dynamic_grid(sample_id, layer=26, per_sample_payload=None):
         xaxis_title="Direction",
         yaxis_title="Sequence Step",
         template="plotly_white",
-        height=360,
+        height=324,
         margin=dict(l=40, r=20, t=40, b=40)
     )
     fig.update_yaxes(autorange="reversed")

@@ -504,12 +504,12 @@ def register_level2_callbacks(app):
             })
         sample_id = clickData['points'][0]['hovertext']
         return html.Div([
-            dcc.Graph(id='rq2-static-bar',
-                      figure=build_rq2_static_bar(),
-                      config={'responsive': True},
-                      style={'flex': 1, 'minWidth': 0}),
             dcc.Graph(id='rq2-dynamic-grid',
                       figure=build_rq2_dynamic_grid(sample_id),
+                      config={'responsive': True},
+                      style={'flex': 1, 'minWidth': 0}),
+            dcc.Graph(id='rq2-static-bar',
+                      figure=build_rq2_static_bar(),
                       config={'responsive': True},
                       style={'flex': 1, 'minWidth': 0}),
         ], style={'display': 'flex', 'flexDirection': 'row', 'height': '100%'})
