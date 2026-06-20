@@ -53,6 +53,9 @@ class RealDataLoader:
         self.metadata = []
         self.processed_samples = []
         self.maze_dict = {}
+        self.X_pca = None
+        self.X_raw = None
+        self.X_norm = None
 
         # Caching for re-projection
         self.X_raw = None # Raw cached hidden states (float32)

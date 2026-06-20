@@ -1,5 +1,4 @@
 
-from dash import dcc
 import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
@@ -44,7 +43,7 @@ def _compute_y_stretch(viewport, df):
 
 def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, viewport=None, highlight_flippers=False):
     if not data_source:
-        return dcc.Graph(id='level1-scatter', figure=go.Figure().update_layout(title="No Data Available"))
+        return go.Figure().update_layout(title="No Data Available")
 
     # 1. Prepare data
     rows = []
