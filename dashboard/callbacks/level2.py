@@ -23,14 +23,6 @@ ABLATED_DATA = json.loads(Path('data/ablation_results.json').read_text())
 
 
 
-def _format_metric(value, digits=3):
-    if isinstance(value, bool):
-        return 'yes' if value else 'no'
-    if isinstance(value, (int, float)):
-        return f"{value:.{digits}f}"
-    return str(value)
-
-
 def _ablation_key(sample):
     meta = sample.get('metadata', {})
     raw_id = meta.get('sample_id', sample.get('sample_id'))
@@ -224,162 +216,23 @@ def _compute_move_kl(clean_dist, ablated_dist):
 
 
 def _plan_row(clean_plan, mean_clean_conf, mean_abl_conf):
-    """Predicted-plan label with the direction glyphs boxed beside it, then an
-    optional 'unchanged' badge and mean-confidence readout pushed to the right."""
+    """Predicted-plan label with direction glyphs in a subtle box."""
     glyphs = [html.Span(_DIR_GLYPH.get(d, '?'), style={
         'fontSize': '0.95rem', 'color': '#06b6d4', 'fontWeight': 'bold',
     }) for d in clean_plan]
 
-    row = [
+    return html.Div([
         html.Span('Predicted plan', style={
             'fontSize': '0.55rem', 'color': '#888', 'textTransform': 'uppercase',
             'letterSpacing': '0.1em', 'marginRight': '8px',
         }),
         html.Div(glyphs or html.Span('—', style={'fontSize': '0.8rem', 'color': '#bbb'}), style={
             'display': 'flex', 'alignItems': 'center', 'gap': '5px',
-            'padding': '2px 10px', 'marginRight': 'auto',
+            'padding': '2px 10px', 'marginRight': '12px',
             'border': '1px solid #06b6d440', 'borderRadius': '5px',
             'backgroundColor': '#06b6d40d',
         }),
-    ]
-
-    if mean_abl_conf is not None:
-        row.append(html.Span('unchanged', style={
-            'fontSize': '0.5rem', 'color': '#06b6d4', 'fontFamily': 'monospace',
-            'textTransform': 'uppercase', 'letterSpacing': '0.05em',
-            'padding': '1px 6px', 'border': '1px solid #06b6d433',
-            'borderRadius': '3px', 'backgroundColor': '#06b6d410', 'marginRight': '8px',
-        }))
-
-    conf = [
-        html.Span('mean confidence ', style={'fontSize': '0.55rem', 'color': '#888', 'fontFamily': 'monospace'}),
-        html.Span(f'{mean_clean_conf:.4f}', style={'fontSize': '0.55rem', 'color': '#06b6d4', 'fontFamily': 'monospace'}),
-    ]
-    if mean_abl_conf is not None:
-        conf += [
-            html.Span(' → ', style={'fontSize': '0.55rem', 'color': '#666'}),
-            html.Span(f'{mean_abl_conf:.4f}', style={'fontSize': '0.55rem', 'color': '#eab308', 'fontFamily': 'monospace'}),
-        ]
-    row.append(html.Div(conf, style={'display': 'flex', 'alignItems': 'baseline', 'gap': '2px'}))
-
-    return html.Div(row, style={'display': 'flex', 'alignItems': 'center', 'padding': '4px 8px',
-                                'borderBottom': '1px solid #e9ecef'})
-
-
-def _per_step_cards(moves, rank):
-    """One horizontal strip of narrow cards, each showing confidence + KL shift.
-
-    Two compact bars per step:
-    1. Clean confidence: width = winner probability (always near 100 %)
-    2. KL shift:  width = log10-scaled move-KL, visible even for tiny shifts
-    """
-    if not moves:
-        return html.Div('No per-move data for this token', className='small text-muted',
-                        style={'padding': '8px'})
-
-    max_kl = max((_compute_move_kl(m['clean'], m['ablated']) for m in moves), default=1e-9) or 1e-9
-    eps = 1e-9
-
-    def _kl_pct(kl_val):
-        """log10 scaling: 0 → 0 %, max_kl → 100 %, tiny values stay visible."""
-        if kl_val <= 0:
-            return 0.0
-        lo = math.log10(eps)
-        hi = math.log10(max_kl + eps)
-        span = hi - lo or 1.0
-        return (math.log10(kl_val + eps) - lo) / span * 100
-
-    cards = []
-    for i, m in enumerate(moves):
-        winner = max(m['clean'], key=m['clean'].get)
-        conf = m['clean'][winner]
-        kl = _compute_move_kl(m['clean'], m['ablated'])
-        kl_pct = _kl_pct(kl)
-
-        cards.append(html.Div([
-            # Header: step number + winner direction glyph
-            html.Div([
-                html.Span(f'step {i}', style={
-                    'fontSize': '0.5rem', 'color': '#888',
-                    'fontFamily': 'monospace',
-                }),
-                html.Span(_DIR_GLYPH.get(winner, '?'), style={
-                    'fontSize': '0.65rem', 'color': '#06b6d4',
-                    'fontWeight': 'bold', 'marginLeft': '4px',
-                }),
-            ], style={'display': 'flex', 'alignItems': 'baseline', 'marginBottom': '3px'}),
-
-            # Confidence row
-            html.Div([
-                html.Span('conf', style={
-                    'fontSize': '0.45rem', 'color': '#aaa', 'fontFamily': 'monospace',
-                    'minWidth': '2.2em',
-                }),
-                html.Div(style={
-                    'flex': '1', 'position': 'relative', 'height': '5px',
-                    'margin': '0 4px',
-                    'backgroundColor': '#f0f0f0', 'borderRadius': '2px',
-                    'overflow': 'hidden',
-                }, children=[
-                    html.Div(style={
-                        'position': 'absolute', 'inset': 0,
-                        'width': f'{conf * 100:.1f}%', 'height': '100%',
-                        'backgroundColor': '#06b6d470', 'borderRadius': '2px',
-                    }),
-                ]),
-                html.Span(f'{conf:.4f}', style={
-                    'fontSize': '0.45rem', 'color': '#06b6d4',
-                    'fontFamily': 'monospace', 'minWidth': '3.2em',
-                    'textAlign': 'right',
-                }),
-            ], style={'display': 'flex', 'alignItems': 'center', 'marginBottom': '2px'}),
-
-            # KL shift row (log-scale bar)
-            html.Div([
-                html.Span('shift', style={
-                    'fontSize': '0.45rem', 'color': '#aaa', 'fontFamily': 'monospace',
-                    'minWidth': '2.2em',
-                }),
-                html.Div(style={
-                    'flex': '1', 'position': 'relative', 'height': '5px',
-                    'margin': '0 4px',
-                    'backgroundColor': '#f0f0f0', 'borderRadius': '2px',
-                    'overflow': 'hidden',
-                }, children=[
-                    html.Div(style={
-                        'position': 'absolute', 'inset': 0,
-                        'width': f'{min(kl_pct, 100):.1f}%', 'height': '100%',
-                        'backgroundColor': '#eab308', 'borderRadius': '2px',
-                    }),
-                ]),
-                html.Span(f'{kl:.4f} KL', style={
-                    'fontSize': '0.45rem', 'color': '#eab308',
-                    'fontFamily': 'monospace', 'minWidth': '4.2em',
-                    'textAlign': 'right',
-                }),
-            ], style={'display': 'flex', 'alignItems': 'center'}),
-        ], style={
-            'width': '160px', 'flexShrink': 0,
-            'backgroundColor': '#fafafa', 'border': '1px solid #e9ecef',
-            'borderRadius': '4px', 'padding': '3px 4px',
-        }))
-
-    return html.Div(children=cards, style={
-        'display': 'flex', 'gap': '4px',
-        'overflowX': 'auto', 'padding': '4px 8px',
-    })
-
-
-def _render_unablated_path(sample_id):
-    """Clean path view — identical layout to `_plan_row`, minus ablated side."""
-    moves = load_moves(sample_id, 0)
-    if not moves:
-        return html.Div('N/A', className='small text-muted p-2')
-
-    clean_plan = [max(m['clean'], key=m['clean'].get) for m in moves]
-    clean_conf = [m['clean'][d] for d, m in zip(clean_plan, moves)]
-    mean_cc = sum(clean_conf) / len(clean_conf)
-    return _plan_row(clean_plan, mean_cc, None)
+    ], style={'display': 'flex', 'alignItems': 'center', 'padding': '4px 0'})
 
 
 def _token_contribution_strip(sample_id, ablated_ranks):
@@ -532,8 +385,8 @@ def _dose_legend():
     ], style={'display': 'flex', 'flexWrap': 'wrap', 'gap': '10px', 'padding': '2px 2px 3px'})
 
 
-def _flip_readout(cur):
-    """One-line current-combo summary: KL + both flip definitions."""
+def _flip_readout(cur, mean_clean_conf=None, mean_abl_conf=None):
+    """One-line current-combo summary: KL + both flip definitions, optional confidence."""
     if not cur:
         return None
 
@@ -546,7 +399,7 @@ def _flip_readout(cur):
             'backgroundColor': '#fee2e2' if on else '#dcfce7',
         })
 
-    return html.Div([
+    items = [
         html.Span(f"zero {cur['k']} tokens", style={
             'fontSize': '0.66rem', 'color': '#475569', 'fontFamily': 'monospace',
             'fontWeight': 'bold', 'whiteSpace': 'nowrap',
@@ -557,9 +410,27 @@ def _flip_readout(cur):
         }),
         _badge('text ' + ('flipped' if cur['em_flipped'] else 'stable'), cur['em_flipped']),
         _badge('plan ' + ('flipped' if cur['plan_flipped'] else 'stable'), cur['plan_flipped']),
-    ], style={
+    ]
+
+    if mean_clean_conf is not None and mean_abl_conf is not None:
+        items += [
+            html.Span('unchanged', style={
+                'fontSize': '0.5rem', 'color': '#06b6d4', 'fontFamily': 'monospace',
+                'textTransform': 'uppercase', 'letterSpacing': '0.05em',
+                'padding': '1px 6px', 'border': '1px solid #06b6d433',
+                'borderRadius': '3px', 'backgroundColor': '#06b6d410',
+            }),
+            html.Span(f'{mean_clean_conf:.4f}', style={
+                'fontSize': '0.55rem', 'color': '#06b6d4', 'fontFamily': 'monospace',
+            }),
+            html.Span('→', style={'fontSize': '0.55rem', 'color': '#666'}),
+            html.Span(f'{mean_abl_conf:.4f}', style={
+                'fontSize': '0.55rem', 'color': '#eab308', 'fontFamily': 'monospace',
+            }),
+        ]
+
+    return html.Div(items, style={
         'display': 'flex', 'alignItems': 'center', 'flexWrap': 'wrap', 'gap': '12px',
-        'padding': '2px 8px',
     })
 
 
@@ -594,27 +465,15 @@ def _ablated_plan_row(sample_id, ablated_ranks):
 
 
 def _render_output_panel(sample_id, ablated_ranks, show_strip=False):
-    """Pinned plan-row + aggregate footer for the selected ablation state."""
-    header = []
+    """Dose-response graph for the ablation tab."""
     footer = []
-
-    if not ablated_ranks:
-        header.append(_render_unablated_path(sample_id))
-    else:
-        header.append(_plan_row(*_ablated_plan_row(sample_id, ablated_ranks)))
 
     if show_strip:
         footer.append(_dose_response_graph(sample_id, ablated_ranks))
 
     return html.Div([
-        html.Div(header, style={'flexShrink': 0}),
         html.Div(footer, style={'overflowY': 'auto', 'maxHeight': '100%'}) if footer else None,
     ], style={'display': 'flex', 'flexDirection': 'column', 'height': '100%'})
-
-
-def _render_ablation_tab(sample_id, ablated_ranks):
-    """Ablation tab: KL bar chart for the selected sample."""
-    return _ablation_summary(sample_id)
 
 
 def update_level2_logic(clickData):
@@ -666,16 +525,22 @@ def register_level2_callbacks(app):
         ], style={'display': 'flex', 'flexDirection': 'row', 'height': '100%'})
 
     @app.callback(
-        Output('token-flip-readout', 'children'),
+        Output('level2-plan-status-row', 'children'),
         [Input('level1-scatter', 'clickData'),
          Input('ablation-state', 'data')]
     )
-    def update_flip_readout(clickData, ablation_state):
+    def update_plan_status(clickData, ablation_state):
         if not clickData:
-            return None
+            return html.Div(className='p-1')
         sample_id = clickData['points'][0]['hovertext']
         ablated = (ablation_state or {}).get('ablated_ranks', [])
-        return _flip_readout(current_combo_metrics(sample_id, ablated))
+        plan, cc, ac = _ablated_plan_row(sample_id, ablated)
+        readout = _flip_readout(current_combo_metrics(sample_id, ablated), cc, ac)
+        return html.Div([
+            _plan_row(plan, cc, ac),
+            readout if readout else None,
+        ], style={'display': 'flex', 'alignItems': 'center', 'gap': '8px',
+                  'padding': '0 8px'})
 
     @app.callback(
         Output('level2-token-grid', 'children'),
