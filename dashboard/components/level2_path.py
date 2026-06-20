@@ -22,13 +22,6 @@ def create_level2_top():
     ], className="g-0", style={'flexShrink': 0, 'height': '15vh', 'paddingBottom': '4px'})
 
 
-def create_level2_plan_row():
-    """Pinned plan + status row: predicted plan arrows + flip readout side by side."""
-    return dbc.Row([
-        dbc.Col(html.Div(id='level2-plan-status-row'), width=12),
-    ], className="g-0", style={'flexShrink': 0})
-
-
 def create_level2_bottom():
     """Bottom content: dose-response graph (left) + KL chart & token strip (right)."""
     return dbc.Row([

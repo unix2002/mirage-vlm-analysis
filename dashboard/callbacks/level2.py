@@ -8,7 +8,8 @@ from functools import lru_cache
 from dash.dependencies import Input, Output, State, ALL
 from dash import dcc, html, callback_context, no_update
 import plotly.graph_objects as go
-from ..mock_data import MOCK_DATA
+from ..data_loader import LOADER
+from ..gen_data import reroute_plan
 from .ablation_v2 import (
     load_moves, load_combo_dist, load_clean_plan, load_per_token_summary,
     sample_dose_response, token_marginal_contributions, current_combo_metrics, mask_for_ranks,
@@ -214,24 +215,41 @@ def _compute_move_kl(clean_dist, ablated_dist):
     return sum(kls)
 
 
-def _plan_row(clean_plan, mean_clean_conf, mean_abl_conf):
-    """Predicted-plan label with direction glyphs in a subtle box."""
-    glyphs = [html.Span(_DIR_GLYPH.get(d, '?'), style={
-        'fontSize': '0.95rem', 'color': '#06b6d4', 'fontWeight': 'bold',
-    }) for d in clean_plan]
+def _plan_row(clean_plan, mean_clean_conf, mean_abl_conf, new_plan=None):
+    """Predicted-plan label with direction glyphs in a subtle box.
 
-    return html.Div([
-        html.Span('Predicted plan', style={
-            'fontSize': '0.55rem', 'color': '#888', 'textTransform': 'uppercase',
-            'letterSpacing': '0.1em', 'marginBottom': '2px',
+    If `new_plan` is given and differs (the ablation rerouted the model's free-run
+    plan), show the NEW plan in red and the original struck-through beneath it.
+    """
+    rerouted = new_plan is not None and list(new_plan) != list(clean_plan)
+    plan = list(new_plan) if rerouted else list(clean_plan)
+    accent = '#dc3545' if rerouted else '#06b6d4'
+
+    glyphs = [html.Span(_DIR_GLYPH.get(d, '?'), style={
+        'fontSize': '0.95rem', 'color': accent, 'fontWeight': 'bold',
+    }) for d in plan]
+
+    children = [
+        html.Span('Predicted plan — rerouted' if rerouted else 'Predicted plan', style={
+            'fontSize': '0.55rem', 'color': accent if rerouted else '#888',
+            'textTransform': 'uppercase', 'letterSpacing': '0.1em', 'marginBottom': '2px',
+            'fontWeight': 'bold' if rerouted else 'normal',
         }),
         html.Div(glyphs or html.Span('—', style={'fontSize': '0.8rem', 'color': '#bbb'}), style={
-            'display': 'flex', 'alignItems': 'center', 'gap': '5px',
-            'padding': '2px 10px',
-            'border': '1px solid #06b6d440', 'borderRadius': '5px',
-            'backgroundColor': '#06b6d40d',
+            'display': 'flex', 'alignItems': 'center', 'gap': '5px', 'padding': '2px 10px',
+            'border': f'1px solid {accent}{"80" if rerouted else "40"}', 'borderRadius': '5px',
+            'backgroundColor': f'{accent}{"14" if rerouted else "0d"}',
         }),
-    ], style={'display': 'flex', 'flexDirection': 'column', 'alignItems': 'center', 'padding': '4px 0'})
+    ]
+    if rerouted:
+        children.append(html.Div(
+            [html.Span('was', style={'color': '#aaa', 'marginRight': '4px'})] +
+            [html.Span(_DIR_GLYPH.get(d, '?'), style={'color': '#aaa', 'marginLeft': '2px'})
+             for d in clean_plan],
+            style={'fontSize': '0.5rem', 'marginTop': '2px', 'textDecoration': 'line-through'}))
+
+    return html.Div(children, style={
+        'display': 'flex', 'flexDirection': 'column', 'alignItems': 'center', 'padding': '4px 0'})
 
 
 def _token_contribution_strip(sample_id, ablated_ranks):
@@ -456,7 +474,7 @@ def update_level2_logic(clickData):
         )
 
     sample_id = clickData['points'][0]['hovertext']
-    sample = next(s for s in MOCK_DATA if s['sample_id'] == sample_id)
+    sample = next(s for s in LOADER.get_data() if s['sample_id'] == sample_id)
 
     return _maze_view(sample)
 
@@ -525,6 +543,11 @@ def register_level2_callbacks(app):
         sample_id = clickData['points'][0]['hovertext']
         ablated = (ablation_state or {}).get('ablated_ranks', [])
         plan, cc, ac = _ablated_plan_row(sample_id, ablated)
+        rr = reroute_plan(sample_id, ablated)
+        if rr:
+            base, new = rr
+            return html.Div(_plan_row(base, cc, ac, new_plan=new),
+                            style={'display': 'flex', 'justifyContent': 'center'})
         return html.Div(_plan_row(plan, cc, ac),
                         style={'display': 'flex', 'justifyContent': 'center'})
 
@@ -537,7 +560,7 @@ def register_level2_callbacks(app):
         if not clickData:
             return html.Div(className='p-2')
         sample_id = clickData['points'][0]['hovertext']
-        sample = next(s for s in MOCK_DATA if s['sample_id'] == sample_id)
+        sample = next(s for s in LOADER.get_data() if s['sample_id'] == sample_id)
         ablated = (ablation_state or {}).get('ablated_ranks', [])
         return _token_grid(sample, ablated)
 
@@ -549,7 +572,7 @@ def register_level2_callbacks(app):
     )
     def update_output_pane(clickData, ablation_state, active_tab):
         if not clickData:
-            return html.Div("Select a Sample (Level 1)", className="p-2 text-muted small")
+            return html.Div("Select a Sample (Level 1)", className="p-2 text-muted small") if active_tab == 'ablation' else html.Div()
         sample_id = clickData['points'][0]['hovertext']
         ablated = (ablation_state or {}).get('ablated_ranks', [])
         return _render_output_panel(sample_id, ablated, show_strip=(active_tab == 'ablation'))

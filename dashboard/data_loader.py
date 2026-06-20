@@ -44,7 +44,7 @@ class RealDataLoader:
                 else:
                     logging.warning("No samples processed.")
             else:
-                logging.error("No real data found. Dashboard will fallback to synthetic data.")
+                logging.error("No data directory found. Dashboard will have no sample data.")
         except Exception as e:
             logging.error(f"Critical error during data initialization: {str(e)}")
             logging.debug(traceback.format_exc())

@@ -1,12 +1,35 @@
 from dash.dependencies import Input, Output, State, ALL
+from dash import dcc, html
 import dash
+import dash_bootstrap_components as dbc
 import plotly.express as px
 import plotly.graph_objects as go
 import json
 import numpy as np
-from ..mock_data import MOCK_DATA
+from ..data_loader import get_layer_heatmap, LOADER
 from .ablation_v2 import load_per_token_summary
-from ..data_loader import get_layer_heatmap
+
+
+def _build_level3_content(fig_heatmap, fig_bar, fig_curve, layer_value=26):
+    """Build the full Level 3 detail row + layer slider as a single element."""
+    return html.Div([
+        dbc.Row([
+            dbc.Col(dcc.Graph(id='token-detail-heatmap', figure=fig_heatmap,
+                    style={'height': '30vh'}), width=4),
+            dbc.Col(dcc.Graph(id='token-detail-probe-bar', figure=fig_bar,
+                    style={'height': '30vh'}), width=4),
+            dbc.Col(dcc.Graph(id='token-detail-dependency-curve', figure=fig_curve,
+                    style={'height': '30vh'}), width=4),
+        ], className="g-0"),
+        dbc.Row([
+            dbc.Col(dcc.Slider(
+                id='layer-slider',
+                min=0, max=26, step=1, value=layer_value,
+                marks={0: '0', 6: '6', 13: '13', 20: '20', 26: '26'},
+                tooltip=dict(placement='bottom'),
+            ), width=4),
+        ], className="mt-1"),
+    ])
 
 
 def _extract_active_click(token_clicks):
@@ -37,7 +60,7 @@ def update_level3_logic(token_clicks, clickData, triggered_id_full):
 
     token_id = json.loads(triggered_id_full)['index']
     sample_id = clickData['points'][0]['hovertext']
-    sample = next(s for s in MOCK_DATA if s['sample_id'] == sample_id)
+    sample = next(s for s in LOADER.get_data() if s['sample_id'] == sample_id)
     token = next(t for t in sample['tokens'] if t['token_id'] == token_id)
     token_rank = int(token_id[1:])
 
@@ -81,7 +104,10 @@ def update_level3_logic(token_clicks, clickData, triggered_id_full):
         yaxis=dict(tickfont=dict(size=8))
     )
 
-    store_data = {"sample_id": sample_id, "token_id": token_id, "token_rank": token_rank}
+    store_data = {"sample_id": sample_id, "token_id": token_id, "token_rank": token_rank,
+                  "move_direction": sample['move_direction'],
+                  "probe_accuracy": token['probe_accuracy'],
+                  "kl_divergence": token['kl_divergence']}
     return fig_heatmap, fig_bar, fig_curve, f"Details: {token_id} ({sample_id})", store_data
 
 
@@ -89,9 +115,7 @@ def update_level3_logic(token_clicks, clickData, triggered_id_full):
 
 def register_level3_callbacks(app):
     @app.callback(
-        [Output('token-detail-heatmap', 'figure'),
-         Output('token-detail-probe-bar', 'figure'),
-         Output('token-detail-dependency-curve', 'figure'),
+        [Output('level3-detail-content', 'children'),
          Output('level3-instructions', 'children'),
          Output('current-token-state', 'data')],
         [Input({'type': 'token-heatmap', 'index': ALL}, 'clickData')],
@@ -100,12 +124,12 @@ def register_level3_callbacks(app):
     def update_level3_detail(token_clicks, clickData):
         ctx = dash.callback_context
         if not ctx.triggered:
-            return (dash.no_update,) * 5
+            return (dash.no_update,) * 3
 
         triggered_id_full = ctx.triggered[0]['prop_id']
         active_click = _extract_active_click(token_clicks)
         if not active_click:
-            return (dash.no_update,) * 5
+            return (dash.no_update,) * 3
 
         token_index = None
         if 'token-heatmap' in triggered_id_full:
@@ -115,12 +139,15 @@ def register_level3_callbacks(app):
                 token_index = None
 
         if token_index is None:
-            return (dash.no_update,) * 5
+            return (dash.no_update,) * 3
 
-        return update_level3_logic(active_click, clickData, json.dumps({'index': token_index}))
+        fig_heatmap, fig_bar, fig_curve, text, store_data = update_level3_logic(
+            active_click, clickData, json.dumps({'index': token_index}))
+        content = _build_level3_content(fig_heatmap, fig_bar, fig_curve)
+        return content, text, store_data
 
     @app.callback(
-        Output('token-detail-heatmap', 'figure', allow_duplicate=True),
+        Output('level3-detail-content', 'children', allow_duplicate=True),
         [Input('layer-slider', 'value')],
         [State('current-token-state', 'data')],
         prevent_initial_call=True,
@@ -130,15 +157,16 @@ def register_level3_callbacks(app):
             return dash.no_update
         sid = token_state.get('sample_id')
         token_id = token_state.get('token_id', 'T0')
+        token_rank = token_state.get('token_rank', 0)
         token_idx = int(token_id[1:]) if token_id.startswith('T') else 0
         grid = get_layer_heatmap(sid, token_idx, layer)
         if grid is None:
             return dash.no_update
         grid = np.array(grid)
         grid = np.flipud(grid)
-        fig = px.imshow(grid, color_continuous_scale='Viridis')
+        fig_heatmap = px.imshow(grid, color_continuous_scale='Viridis')
         n = grid.shape[0]
-        fig.update_layout(
+        fig_heatmap.update_layout(
             margin=dict(l=5, r=5, t=20, b=5),
             coloraxis_showscale=True,
             xaxis=dict(title="Column"),
@@ -147,5 +175,27 @@ def register_level3_callbacks(app):
                        ticktext=[str(n - 1), str(n // 2), "0"]),
             title=dict(text=f"RQ1: Spatial Focus ({token_id}, layer {layer})", font=dict(size=10)),
         )
-        return fig
 
+        # Rebuild bar
+        dirs = ['UP', 'DOWN', 'LEFT', 'RIGHT']
+        move_dir = token_state.get('move_direction', 'UP')
+        base = max(0.0, min(1.0, float(token_state.get('probe_accuracy', 0.25))))
+        off_value = max(0.0, min(1.0, base * 0.35))
+        accs = [base if d == move_dir else off_value for d in dirs]
+        fig_bar = px.bar(x=dirs, y=accs, labels={'x': 'Direction', 'y': 'Probe Accuracy'})
+        _style_detail_fig(fig_bar, f"RQ2: Directional Probe Accuracy (Token {token_id})")
+        fig_bar.update_layout(
+            yaxis=dict(range=[0, 1], tickfont=dict(size=8)),
+            xaxis=dict(tickfont=dict(size=8)))
+
+        # Rebuild curve
+        kl_div = token_state.get('kl_divergence', 0.0)
+        kls = [kl_div * (0.82 ** s) for s in range(10)]
+        x = list(range(10))
+        fig_curve = px.line(x=x, y=kls, labels={'x': 'Position', 'y': 'KL Divergence (synthetic decay)'})
+        _style_detail_fig(fig_curve, f"RQ3: Per-Position KL after Zeroing Token {token_id}")
+        fig_curve.update_layout(
+            xaxis=dict(tickfont=dict(size=8)),
+            yaxis=dict(tickfont=dict(size=8)))
+
+        return _build_level3_content(fig_heatmap, fig_bar, fig_curve, layer_value=layer)

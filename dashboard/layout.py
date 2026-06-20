@@ -3,7 +3,7 @@ from dash import html, dcc
 from .components.level1_landscape import create_level1_landscape
 from .components.level2_path import create_level2_top, create_level2_bottom, create_level2_probing_row
 from .components.level3_detail import create_level3_detail
-from .mock_data import MOCK_DATA
+from .data_loader import LOADER
 
 
 def create_header():
@@ -23,7 +23,7 @@ def create_sidebar():
             dbc.CardBody([
                 dcc.Graph(
                     id='level1-scatter', 
-                    figure=create_level1_landscape(MOCK_DATA),
+                    figure=create_level1_landscape(LOADER.get_data()),
                     style={'height': '55vh', 'width': '100%'},
                     config={'responsive': True}
                 )
