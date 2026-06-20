@@ -146,6 +146,16 @@ class RealDataLoader:
         processed = []
         all_hidden_states = []
         self.valid_indices = []
+        self.has_raw_hs = False
+
+        # Try loading pre-computed PCA cache (removes 10 GB hidden-states dependency)
+        pca_cache = os.path.join(self.data_dir, 'processed', 'pca_vectors.npy')
+        if os.path.exists(pca_cache):
+            self.X_pca = np.load(pca_cache).astype(np.float64)
+            self.X_raw = None
+            self.X_norm = None
+            logging.info("Loaded pre-computed PCA vectors (%d × %d) — hidden states not needed.",
+                         self.X_pca.shape[0], self.X_pca.shape[1])
 
         for i, meta in enumerate(samples_to_process):
             try:
@@ -227,8 +237,9 @@ class RealDataLoader:
                         'kl_divergence': kl_divergence
                     })
 
-                # 2. Load Hidden States
-                if os.path.exists(hs_path):
+                # 2. Load Hidden States (skip if PCA cache is available)
+                if self.X_pca is None and os.path.exists(hs_path):
+                    self.has_raw_hs = True
                     try:
                         hs_data = torch.load(hs_path, map_location='cpu')
                         if isinstance(hs_data, dict):
@@ -281,55 +292,63 @@ class RealDataLoader:
         # Compute per-sample plan-change flag from train_plans_gen.jsonl
         _enrich_has_plan_flip(self.data_dir, processed)
 
-        # Cache hidden states
-        if len(all_hidden_states) > 5:
+        # PCA cache path — skip hidden-state loading entirely
+        if self.X_pca is not None:
+            self.valid_indices = list(range(len(processed)))
+        # Legacy path — build feature matrices from hidden states
+        elif len(all_hidden_states) > 5:
             self.X_raw = np.array(all_hidden_states)
 
-            # Pre-compute L2 Normalization (Standard for Cosine)
+            # Pre-compute L2 Normalization
             norms = np.linalg.norm(self.X_raw, axis=1, keepdims=True)
             self.X_norm = self.X_raw / (norms + 1e-8)
 
-            # Pre-compute PCA Denoising to avoid latency during sweeps
+            # Pre-compute PCA Denoising
             n_comp = min(32, self.X_norm.shape[0], self.X_norm.shape[1])
             pca = PCA(n_components=n_comp, random_state=42)
             self.X_pca = pca.fit_transform(self.X_norm)
 
-            # Eagerly compute default UMAP at startup using PCA input
-            # (32-dim → seconds). The raw 4096-dim input is available via
-            # the PCA toggle for users who want the higher-dim embedding.
-            if HAS_UMAP and self.valid_indices:
-                reducer = umap.UMAP(n_neighbors=5, min_dist=0.3, metric='cosine',
-                                    n_components=2, random_state=42)
-                coords = reducer.fit_transform(self.X_pca)
-                for idx, coord_idx in enumerate(self.valid_indices):
-                    if coord_idx >= len(processed):
-                        continue
-                    target = processed[coord_idx]
-                    target['umap_x'] = float(coords[idx, 0])
-                    target['umap_y'] = float(coords[idx, 1])
-                logging.info("Default UMAP projection ready (PCA input).")
+        # Eagerly compute default UMAP at startup from PCA input
+        if self.X_pca is not None and HAS_UMAP and self.valid_indices:
+            reducer = umap.UMAP(n_neighbors=5, min_dist=0.3, metric='cosine',
+                                n_components=2, random_state=42)
+            coords = reducer.fit_transform(self.X_pca)
+            for idx, coord_idx in enumerate(self.valid_indices):
+                if coord_idx >= len(processed):
+                    continue
+                target = processed[coord_idx]
+                target['umap_x'] = float(coords[idx, 0])
+                target['umap_y'] = float(coords[idx, 1])
+            logging.info("Default UMAP projection ready (PCA input).")
 
-            logging.info("Hidden-state cache ready; default UMAP projection pre-computed.")
-        else:
-            if not HAS_UMAP:
-                logging.error("UMAP library not installed. Points will remain at origin.")
-            elif len(all_hidden_states) <= 5:
-                logging.warning(f"Insufficient hidden states ({len(all_hidden_states)}) for UMAP projection.")
+        if self.X_pca is not None:
+            logging.info("UMAP ready — PCA cache loaded, hidden states not needed.")
+        elif not HAS_UMAP:
+            logging.error("UMAP library not installed. Points will remain at origin.")
+        elif len(all_hidden_states) <= 5:
+            logging.warning(f"Insufficient hidden states ({len(all_hidden_states)}) for UMAP projection.")
 
         return processed
 
     def recompute_umap(self, n_neighbors, min_dist, use_pca=False, processed_override=None):
-        """Dynamic re-projection using pre-computed features."""
+        """Dynamic re-projection using pre-computed features.
+
+        Falls back to PCA input when raw hidden states are unavailable
+        (i.e., when using the pre-computed PCA cache).
+        """
         target_processed = processed_override if processed_override is not None else self.processed_samples
 
         if not target_processed:
             logging.warning("No processed samples available for UMAP re-projection")
             return target_processed
 
-        if self.X_raw is not None and HAS_UMAP:
+        if self.X_pca is not None and HAS_UMAP:
             try:
-                # Select pre-computed input feature set
-                X_input = self.X_pca if use_pca else self.X_norm
+                # Use PCA input as the default; raw 4096-dim only when available
+                if use_pca or self.X_norm is None:
+                    X_input = self.X_pca
+                else:
+                    X_input = self.X_norm
 
                 # Scientific Stabilizer: Cosine Metric
                 reducer = umap.UMAP(

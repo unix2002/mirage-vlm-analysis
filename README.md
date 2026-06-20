@@ -17,40 +17,39 @@ pip install -r requirements.txt
 
 ### Data Setup
 
-The dashboard needs the following files in `data/`:
+The dashboard needs files in `data/`. Small files are tracked in git; large ones are external.
 
-| File | Size | Source |
-|------|------|--------|
-| `ablation_results.json` | 5 MB | Git |
-| `ablation_v2/subsets.json` | 1 MB | Git |
-| `train_plans_gen.jsonl` | 12 MB | Git |
-| `test_plans_gen.jsonl` | 5 MB | Git |
-| `processed/rq2/probe_results.json` | 1 KB | Git |
-| `processed/rq2/probe_results_per_sample.json` | 18 MB | Git |
-| `metadata.json` | 2.7 MB | External (Drive) |
-| `tensors/` (996 sample dirs) | 16 GB | External (Drive) |
-| `vsp_spatial_planning/` (maze images) | 111 MB | External (Drive) |
-
-The final structure:
-
+**Option A — Full setup** (16 GB tensors, all features):
 ```
 data/
-├── ablation_results.json
-├── ablation_v2/subsets.json
-├── train_plans_gen.jsonl
-├── test_plans_gen.jsonl
-├── processed/rq2/probe_results.json
-├── processed/rq2/probe_results_per_sample.json
-├── metadata.json
-├── tensors/
-│   ├── sample_000/{hidden_states.pt, latent_to_visual_attn.pt, ...}
-│   └── ...
-└── vsp_spatial_planning/
-    ├── img/ (maze step images)
-    └── train_direct.jsonl
+├── ablation_results.json               (git)
+├── ablation_v2/subsets.json             (git)
+├── train_plans_gen.jsonl                (git)
+├── test_plans_gen.jsonl                 (git)
+├── processed/rq2/probe_results*.json    (git)
+├── metadata.json                        (Drive)
+├── tensors/sample_*/{hidden_states.pt, latent_to_visual_attn.pt}  (Drive, 16 GB)
+└── vsp_spatial_planning/                (Drive, 111 MB)
 ```
 
-The large files (`metadata.json`, `tensors/`, `vsp_spatial_planning/`) are shared privately via Google Drive — ask the team for the download link. The smaller JSON/JSONL files are tracked in git.
+**Option B — Compact setup** (~10 MB, no GPUs needed):
+
+Run the PCA precomputation once (on a machine with the tensors):
+```bash
+python3 scripts/precompute_pca.py
+```
+
+This creates `data/processed/pca_vectors.npy` (~127 KB) + `data/processed/pca_model.pkl`. After that, only spatial focus data is needed:
+```
+data/
+├── ... (same git-tracked files as above)
+├── metadata.json                        (Drive)
+├── processed/pca_vectors.npy            (precomputed, 127 KB)
+├── tensors/sample_*/{latent_to_visual_attn.pt}  (Drive, 54 MB)
+└── vsp_spatial_planning/                (Drive, 111 MB)
+```
+
+The 10 GB of `hidden_states.pt` files are no longer needed. All UMAP configurations (n_neighbors, min_dist, color metric, flipper toggle) work identically. The PCA toggle is silently ignored since raw 4096-dim data is unavailable.
 
 ### Run
 
@@ -167,6 +166,6 @@ Tests cover component structure, layout integrity, callback logic, maze renderin
 
 ## Getting the Data
 
-The large data files (`metadata.json`, `tensors/`, `vsp_spatial_planning/`) are shared privately via Google Drive — ask the team for the download link. Place them in `data/` as shown in the Quick Start section.
+The large data files (`metadata.json`, `tensors/`, `vsp_spatial_planning/`) are shared privately via Google Drive — ask the team for the download link. Place them in `data/` as shown in the Quick Start section. The git-tracked JSON/JSONL files are available on clone.
 
-The smaller files (`ablation_results.json`, `subsets.json`, `*_plans_gen.jsonl`, `probe_results*.json`) are tracked in git and available on clone.
+**Compact setup**: Run `python3 scripts/precompute_pca.py` once on a machine with the tensors to produce `data/processed/pca_vectors.npy`. After that, only `latent_to_visual_attn.pt` files are needed (54 MB), and the 10 GB of `hidden_states.pt` files can be discarded.
