@@ -1,9 +1,9 @@
 
 import json
 import os
+import tarfile
 import torch
 import numpy as np
-import traceback
 import warnings
 import re
 from sklearn.decomposition import PCA
@@ -57,32 +57,64 @@ class RealDataLoader:
         self.X_raw = None
         self.X_norm = None
         self.attn_cache = None
-
-        # Caching for re-projection
-        self.X_raw = None # Raw cached hidden states (float32)
         self.valid_indices = []
+        self._loaded = False
 
         try:
             self._initialize_paths(data_dir)
-            if self.data_dir:
-                self.processed_samples = self._process_all_samples()
-                if self.processed_samples:
-                    logging.info(f"Successfully loaded {len(self.processed_samples)} samples from {self.data_dir}")
-                else:
-                    logging.warning("No samples processed.")
-            else:
-                logging.error("No data directory found. Dashboard will have no sample data.")
         except Exception as e:
-            logging.error(f"Critical error during data initialization: {str(e)}")
-            logging.debug(traceback.format_exc())
+            logging.warning(f"RealDataLoader init failed: {e}")
+
+    def _ensure_loaded(self):
+        if self._loaded:
+            return
+        self._loaded = True
+        if self.data_dir:
+            self.processed_samples = self._process_all_samples()
+            if self.processed_samples:
+                logging.info(f"Successfully loaded {len(self.processed_samples)} samples from {self.data_dir}")
+            else:
+                logging.warning("No samples processed.")
+        else:
+            logging.warning("No data directory found. Dashboard will have no sample data.")
 
     def _load_maze_dict(self, data_dir):
-        # Try to find train_direct.jsonl
+        # Try extracted directory first
         base_dir = os.path.dirname(data_dir) if data_dir.endswith('extracted') else data_dir
         jsonl_path = os.path.join(base_dir, 'vsp_spatial_planning', 'train_direct.jsonl')
         
         if not os.path.exists(jsonl_path):
             jsonl_path = '/gpfs/home1/scur0241/mirage_data/vsp_spatial_planning/train_direct.jsonl'
+        
+        # Fallback: read from downloaded tar.gz (GitHub Release)
+        tar_path = os.path.join(base_dir, 'vsp_spatial_planning.tar.gz')
+        if os.path.exists(tar_path) and not os.path.exists(jsonl_path):
+            try:
+                with tarfile.open(tar_path, 'r:gz') as tar:
+                    for member in tar.getmembers():
+                        if member.name.endswith('train_direct.jsonl'):
+                            f = tar.extractfile(member)
+                            if f:
+                                for line in f.read().decode('utf-8').splitlines():
+                                    if not line.strip():
+                                        continue
+                                    item = json.loads(line)
+                                    if 'image_input' in item:
+                                        img_path = item['image_input']
+                                        match = re.search(r'level_(\d+)/(\d+)/', img_path)
+                                        if match:
+                                            level = int(match.group(1))
+                                            map_id = int(match.group(2))
+                                            self.maze_dict[(level, map_id)] = {
+                                                'map_desc': item.get('map_desc'),
+                                                'full_path': item.get('text_output')
+                                            }
+                            break
+                    if self.maze_dict:
+                        logging.info(f"Loaded {len(self.maze_dict)} maze descriptions from {tar_path}")
+                        return
+            except Exception as e:
+                logging.warning(f"Failed to load maze dict from tar.gz: {e}")
             
         if os.path.exists(jsonl_path):
             try:
@@ -411,11 +443,11 @@ class RealDataLoader:
         return target_processed
 
     def get_data(self):
+        self._ensure_loaded()
         return self.processed_samples
 
-# Singleton instance
+# Singleton instance — data loads lazily on first get_data() call
 LOADER = RealDataLoader()
-REAL_DATA = LOADER.get_data()
 
 
 def get_layer_heatmap(sample_id, token_idx, layer):

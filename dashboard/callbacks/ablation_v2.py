@@ -175,7 +175,6 @@ def sample_dose_response(sample_id):
         kl = sorted(by_k[k]['kl'])
         if not kl:
             continue
-        em = em_by_k.get(k)
         rows.append({
             'k': k,
             'kl_median': kl[len(kl) // 2],
