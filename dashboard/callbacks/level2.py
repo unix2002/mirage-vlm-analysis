@@ -224,15 +224,15 @@ def _plan_row(clean_plan, mean_clean_conf, mean_abl_conf):
     return html.Div([
         html.Span('Predicted plan', style={
             'fontSize': '0.55rem', 'color': '#888', 'textTransform': 'uppercase',
-            'letterSpacing': '0.1em', 'marginRight': '8px',
+            'letterSpacing': '0.1em', 'marginBottom': '2px',
         }),
         html.Div(glyphs or html.Span('—', style={'fontSize': '0.8rem', 'color': '#bbb'}), style={
             'display': 'flex', 'alignItems': 'center', 'gap': '5px',
-            'padding': '2px 10px', 'marginRight': '12px',
+            'padding': '2px 10px',
             'border': '1px solid #06b6d440', 'borderRadius': '5px',
             'backgroundColor': '#06b6d40d',
         }),
-    ], style={'display': 'flex', 'alignItems': 'center', 'padding': '4px 0'})
+    ], style={'display': 'flex', 'flexDirection': 'column', 'alignItems': 'center', 'padding': '4px 0'})
 
 
 def _token_contribution_strip(sample_id, ablated_ranks):
@@ -298,13 +298,13 @@ def _token_contribution_strip(sample_id, ablated_ranks):
         }))
 
     return html.Div([
-        html.Div(cells, style={'display': 'flex', 'flexDirection': 'column', 'gap': '2px', 'flex': 1}),
         html.Div('Marginal KL', style={
-            'fontSize': '0.45rem', 'color': '#888', 'writingMode': 'vertical-rl',
+            'fontSize': '0.45rem', 'color': '#888',
             'textTransform': 'uppercase', 'letterSpacing': '0.05em',
-            'textAlign': 'center', 'flexShrink': 0, 'marginLeft': '2px',
+            'textAlign': 'center', 'flexShrink': 0, 'marginBottom': '2px',
         }),
-    ], style={'display': 'flex', 'flexDirection': 'row', 'padding': '2px 4px'})
+        html.Div(cells, style={'display': 'flex', 'flexDirection': 'column', 'gap': '2px', 'flex': 1}),
+    ], style={'display': 'flex', 'flexDirection': 'column', 'padding': '2px 4px'})
 
 
 def _dose_response_graph(sample_id, ablated_ranks):
@@ -349,88 +349,57 @@ def _dose_response_graph(sample_id, ablated_ranks):
                     tickvals=[0, 50, 100], ticktext=['0', '50', '100%']),
     )
     return html.Div([
-        html.Div(_dose_legend(), style={'flexShrink': 0}),
         html.Div(dcc.Graph(figure=fig, config={'displayModeBar': False},
                            style={'height': '100%', 'width': '100%'}),
                  style={'flex': 1, 'minHeight': 0, 'overflow': 'hidden'}),
-    ], style={'height': '24vh', 'display': 'flex',
+    ], style={'height': '29vh', 'display': 'flex',
               'flexDirection': 'column', 'padding': '0 4px'})
 
 
-def _dose_legend():
-    """Compact HTML legend for the dose-response graph."""
-    def item(swatch, label):
-        return html.Span([swatch, html.Span(label, style={'marginLeft': '4px'})], style={
-            'display': 'flex', 'alignItems': 'center', 'fontSize': '0.5rem',
-            'color': '#64748b', 'fontFamily': 'monospace',
-        })
-
-    def line(color, dash=False):
-        return html.Span(style={
-            'display': 'inline-block', 'width': '14px',
-            'borderTop': f"2px {'dashed' if dash else 'solid'} {color}",
-        })
-
-    band = html.Span(style={'display': 'inline-block', 'width': '14px', 'height': '8px',
-                            'backgroundColor': 'rgba(6,182,212,0.25)'})
-    dot = html.Span(style={'display': 'inline-block', 'width': '8px', 'height': '8px',
-                           'borderRadius': '50%', 'backgroundColor': '#eab308',
-                           'border': '1px solid #92400e'})
-    return html.Div([
-        item(line('#06b6d4'), 'median KL'),
-        item(band, 'min–max'),
-        item(line('#dc3545', dash=True), 'text flip %'),
-        item(line('#94a3b8', dash=True), 'plan flip %'),
-        item(dot, 'current'),
-    ], style={'display': 'flex', 'flexWrap': 'wrap', 'gap': '10px', 'padding': '2px 2px 3px'})
-
-
-def _flip_readout(cur, mean_clean_conf=None, mean_abl_conf=None):
-    """One-line current-combo summary: KL + both flip definitions, optional confidence."""
+def _flip_status_bar(cur):
+    """Compact visual bar showing KL intensity + flip badges for the current combo."""
     if not cur:
         return None
 
     def _badge(text, flipped):
         on = bool(flipped)
         return html.Span(text, style={
-            'fontSize': '0.62rem', 'fontFamily': 'monospace', 'padding': '1px 7px',
+            'fontSize': '0.58rem', 'fontFamily': 'monospace', 'padding': '1px 7px',
             'borderRadius': '3px', 'whiteSpace': 'nowrap',
             'color': '#b91c1c' if on else '#15803d',
             'backgroundColor': '#fee2e2' if on else '#dcfce7',
         })
 
-    items = [
-        html.Span(f"zero {cur['k']} tokens", style={
-            'fontSize': '0.66rem', 'color': '#475569', 'fontFamily': 'monospace',
+    kl_max = max(cur['kl'], 0.001)
+    kl_frac = min(1.0, cur['kl'] / (kl_max * 2))
+    bar_color = '#eab308' if cur['kl'] > 0.005 else '#06b6d4'
+
+    return html.Div([
+        html.Div(f"zero {cur['k']} tokens", style={
+            'fontSize': '0.6rem', 'color': '#475569', 'fontFamily': 'monospace',
             'fontWeight': 'bold', 'whiteSpace': 'nowrap',
+            'marginRight': '8px',
         }),
-        html.Span(f"KL {cur['kl']:.6f}", style={
-            'fontSize': '0.66rem', 'color': '#a16207', 'fontFamily': 'monospace',
-            'fontWeight': 'bold', 'whiteSpace': 'nowrap',
+        html.Div('KL', style={
+            'fontSize': '0.5rem', 'color': '#888', 'fontFamily': 'monospace',
+            'textTransform': 'uppercase', 'marginRight': '4px',
+        }),
+        html.Div(style={
+            'flex': 1, 'height': '8px', 'backgroundColor': '#f0f0f0',
+            'borderRadius': '3px', 'overflow': 'hidden', 'maxWidth': '80px',
+        }, children=[html.Div(style={
+            'width': f'{kl_frac * 100:.0f}%', 'height': '100%',
+            'backgroundColor': bar_color, 'borderRadius': '3px',
+        })]),
+        html.Span(f"{cur['kl']:.6f}", style={
+            'fontSize': '0.55rem', 'color': bar_color, 'fontFamily': 'monospace',
+            'fontWeight': 'bold', 'marginLeft': '6px', 'marginRight': '12px',
         }),
         _badge('text ' + ('flipped' if cur['em_flipped'] else 'stable'), cur['em_flipped']),
         _badge('plan ' + ('flipped' if cur['plan_flipped'] else 'stable'), cur['plan_flipped']),
-    ]
-
-    if mean_clean_conf is not None and mean_abl_conf is not None:
-        items += [
-            html.Span('unchanged', style={
-                'fontSize': '0.5rem', 'color': '#06b6d4', 'fontFamily': 'monospace',
-                'textTransform': 'uppercase', 'letterSpacing': '0.05em',
-                'padding': '1px 6px', 'border': '1px solid #06b6d433',
-                'borderRadius': '3px', 'backgroundColor': '#06b6d410',
-            }),
-            html.Span(f'{mean_clean_conf:.4f}', style={
-                'fontSize': '0.55rem', 'color': '#06b6d4', 'fontFamily': 'monospace',
-            }),
-            html.Span('→', style={'fontSize': '0.55rem', 'color': '#666'}),
-            html.Span(f'{mean_abl_conf:.4f}', style={
-                'fontSize': '0.55rem', 'color': '#eab308', 'fontFamily': 'monospace',
-            }),
-        ]
-
-    return html.Div(items, style={
-        'display': 'flex', 'alignItems': 'center', 'flexWrap': 'wrap', 'gap': '12px',
+    ], style={
+        'display': 'flex', 'alignItems': 'center', 'flexWrap': 'wrap', 'gap': '6px',
+        'padding': '4px 6px', 'fontSize': '0.55rem',
     })
 
 
@@ -465,15 +434,20 @@ def _ablated_plan_row(sample_id, ablated_ranks):
 
 
 def _render_output_panel(sample_id, ablated_ranks, show_strip=False):
-    """Dose-response graph for the ablation tab."""
-    footer = []
-
+    """Token ablation buttons + dose-response graph + flip status bar for the ablation tab."""
+    children = []
     if show_strip:
-        footer.append(_dose_response_graph(sample_id, ablated_ranks))
-
-    return html.Div([
-        html.Div(footer, style={'overflowY': 'auto', 'maxHeight': '100%'}) if footer else None,
-    ], style={'display': 'flex', 'flexDirection': 'column', 'height': '100%'})
+        children.append(html.Div(_token_contribution_strip(sample_id, ablated_ranks),
+                                 style={'flexShrink': 0}))
+        cur = current_combo_metrics(sample_id, ablated_ranks)
+        bar = _flip_status_bar(cur)
+        children.append(html.Div([
+            _dose_response_graph(sample_id, ablated_ranks),
+            bar if bar else None,
+        ], style={'flex': 1, 'minWidth': 0, 'display': 'flex',
+                  'flexDirection': 'column', 'overflow': 'hidden'}))
+    return html.Div(children,
+                    style={'display': 'flex', 'flexDirection': 'row', 'height': '100%'})
 
 
 def update_level2_logic(clickData):
@@ -519,10 +493,8 @@ def register_level2_callbacks(app):
         sample = next(s for s in MOCK_DATA if s['sample_id'] == sample_id)
         sid = _ablation_key(sample)
         ablated = (ablation_state or {}).get('ablated_ranks', [])
-        return html.Div([
-            html.Div(_token_contribution_strip(sid, ablated), style={'flexShrink': 0, 'marginRight': '6px'}),
-            html.Div(_ablation_summary(sid), style={'flex': 1, 'minWidth': 0, 'overflow': 'hidden'}),
-        ], style={'display': 'flex', 'flexDirection': 'row', 'height': '100%'})
+        return html.Div(_ablation_summary(sid),
+                        style={'flex': 1, 'minWidth': 0, 'overflow': 'hidden', 'height': '100%'})
 
     @app.callback(
         Output('level2-plan-status-row', 'children'),
@@ -535,12 +507,8 @@ def register_level2_callbacks(app):
         sample_id = clickData['points'][0]['hovertext']
         ablated = (ablation_state or {}).get('ablated_ranks', [])
         plan, cc, ac = _ablated_plan_row(sample_id, ablated)
-        readout = _flip_readout(current_combo_metrics(sample_id, ablated), cc, ac)
-        return html.Div([
-            _plan_row(plan, cc, ac),
-            readout if readout else None,
-        ], style={'display': 'flex', 'alignItems': 'center', 'gap': '8px',
-                  'padding': '0 8px'})
+        return html.Div(_plan_row(plan, cc, ac),
+                        style={'display': 'flex', 'justifyContent': 'center'})
 
     @app.callback(
         Output('level2-token-grid', 'children'),
