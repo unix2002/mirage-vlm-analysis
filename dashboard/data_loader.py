@@ -53,6 +53,10 @@ class RealDataLoader:
         self.metadata = []
         self.processed_samples = []
         self.maze_dict = {}
+        self.X_pca = None
+        self.X_raw = None
+        self.X_norm = None
+        self.attn_cache = None
 
         # Caching for re-projection
         self.X_raw = None # Raw cached hidden states (float32)
@@ -146,6 +150,23 @@ class RealDataLoader:
         processed = []
         all_hidden_states = []
         self.valid_indices = []
+        self.has_raw_hs = False
+
+        # Try loading pre-computed PCA cache (removes 10 GB hidden-states dependency)
+        pca_cache = os.path.join('data', 'processed', 'pca_vectors.npy')
+        if os.path.exists(pca_cache):
+            self.X_pca = np.load(pca_cache).astype(np.float64)
+            self.X_raw = None
+            self.X_norm = None
+            logging.info("Loaded pre-computed PCA vectors (%d × %d) — hidden states not needed.",
+                         self.X_pca.shape[0], self.X_pca.shape[1])
+
+        # Try loading pre-computed attention cache (per-layer heatmap slider)
+        attn_cache_path = os.path.join('data', 'processed', 'attn_full.npz')
+        if os.path.exists(attn_cache_path):
+            self.attn_cache = dict(np.load(attn_cache_path, allow_pickle=False))
+            logging.info("Loaded attention cache (%d layers) — per-sample tensors not needed.",
+                         len(self.attn_cache))
 
         for i, meta in enumerate(samples_to_process):
             try:
@@ -179,6 +200,7 @@ class RealDataLoader:
 
                 # 1. Load Attention
                 real_attn = None
+                last_layer = None
                 if os.path.exists(attn_path):
                     try:
                         attn_dict = torch.load(attn_path, map_location='cpu')
@@ -189,6 +211,19 @@ class RealDataLoader:
                             real_attn = attn_dict
                     except Exception as e:
                         logging.debug(f"Failed to load attn for {sample_id}: {e}")
+
+                # Fallback to pre-computed attention cache (last layer for initial view)
+                if real_attn is None and self.attn_cache is not None:
+                    try:
+                        layer_keys = sorted(int(k) for k in self.attn_cache.keys() if k != '_nvis')
+                        if layer_keys:
+                            last_layer = layer_keys[-1]
+                            arr = self.attn_cache[str(last_layer)]
+                            if i < arr.shape[0]:
+                                n_vis = int(self.attn_cache.get('_nvis', [arr.shape[2]] * arr.shape[0])[i])
+                                real_attn = torch.from_numpy(arr[i, :, :n_vis])
+                    except Exception as e:
+                        logging.debug(f"Failed attn cache fallback for {sample_id}: {e}")
 
                 tokens = []
                 token_vectors = []
@@ -227,8 +262,9 @@ class RealDataLoader:
                         'kl_divergence': kl_divergence
                     })
 
-                # 2. Load Hidden States
-                if os.path.exists(hs_path):
+                # 2. Load Hidden States (skip if PCA cache is available)
+                if self.X_pca is None and os.path.exists(hs_path):
+                    self.has_raw_hs = True
                     try:
                         hs_data = torch.load(hs_path, map_location='cpu')
                         if isinstance(hs_data, dict):
@@ -281,55 +317,65 @@ class RealDataLoader:
         # Compute per-sample plan-change flag from train_plans_gen.jsonl
         _enrich_has_plan_flip(self.data_dir, processed)
 
-        # Cache hidden states
-        if len(all_hidden_states) > 5:
+        # PCA cache path — skip hidden-state loading entirely
+        if self.X_pca is not None:
+            if len(processed) < self.X_pca.shape[0]:
+                self.X_pca = self.X_pca[:len(processed)]
+            self.valid_indices = list(range(len(processed)))
+        # Legacy path — build feature matrices from hidden states
+        elif len(all_hidden_states) > 5:
             self.X_raw = np.array(all_hidden_states)
 
-            # Pre-compute L2 Normalization (Standard for Cosine)
+            # Pre-compute L2 Normalization
             norms = np.linalg.norm(self.X_raw, axis=1, keepdims=True)
             self.X_norm = self.X_raw / (norms + 1e-8)
 
-            # Pre-compute PCA Denoising to avoid latency during sweeps
+            # Pre-compute PCA Denoising
             n_comp = min(32, self.X_norm.shape[0], self.X_norm.shape[1])
             pca = PCA(n_components=n_comp, random_state=42)
             self.X_pca = pca.fit_transform(self.X_norm)
 
-            # Eagerly compute default UMAP at startup using PCA input
-            # (32-dim → seconds). The raw 4096-dim input is available via
-            # the PCA toggle for users who want the higher-dim embedding.
-            if HAS_UMAP and self.valid_indices:
-                reducer = umap.UMAP(n_neighbors=5, min_dist=0.3, metric='cosine',
-                                    n_components=2, random_state=42)
-                coords = reducer.fit_transform(self.X_pca)
-                for idx, coord_idx in enumerate(self.valid_indices):
-                    if coord_idx >= len(processed):
-                        continue
-                    target = processed[coord_idx]
-                    target['umap_x'] = float(coords[idx, 0])
-                    target['umap_y'] = float(coords[idx, 1])
-                logging.info("Default UMAP projection ready (PCA input).")
+        # Eagerly compute default UMAP at startup from PCA input
+        if self.X_pca is not None and HAS_UMAP and self.valid_indices:
+            reducer = umap.UMAP(n_neighbors=5, min_dist=0.3, metric='cosine',
+                                n_components=2, random_state=42)
+            coords = reducer.fit_transform(self.X_pca)
+            for idx, coord_idx in enumerate(self.valid_indices):
+                if coord_idx >= len(processed):
+                    continue
+                target = processed[coord_idx]
+                target['umap_x'] = float(coords[idx, 0])
+                target['umap_y'] = float(coords[idx, 1])
+            logging.info("Default UMAP projection ready (PCA input).")
 
-            logging.info("Hidden-state cache ready; default UMAP projection pre-computed.")
-        else:
-            if not HAS_UMAP:
-                logging.error("UMAP library not installed. Points will remain at origin.")
-            elif len(all_hidden_states) <= 5:
-                logging.warning(f"Insufficient hidden states ({len(all_hidden_states)}) for UMAP projection.")
+        if self.X_pca is not None:
+            logging.info("UMAP ready — PCA cache loaded, hidden states not needed.")
+        elif not HAS_UMAP:
+            logging.error("UMAP library not installed. Points will remain at origin.")
+        elif len(all_hidden_states) <= 5:
+            logging.warning(f"Insufficient hidden states ({len(all_hidden_states)}) for UMAP projection.")
 
         return processed
 
     def recompute_umap(self, n_neighbors, min_dist, use_pca=False, processed_override=None):
-        """Dynamic re-projection using pre-computed features."""
+        """Dynamic re-projection using pre-computed features.
+
+        Falls back to PCA input when raw hidden states are unavailable
+        (i.e., when using the pre-computed PCA cache).
+        """
         target_processed = processed_override if processed_override is not None else self.processed_samples
 
         if not target_processed:
             logging.warning("No processed samples available for UMAP re-projection")
             return target_processed
 
-        if self.X_raw is not None and HAS_UMAP:
+        if self.X_pca is not None and HAS_UMAP:
             try:
-                # Select pre-computed input feature set
-                X_input = self.X_pca if use_pca else self.X_norm
+                # Use PCA input as the default; raw 4096-dim only when available
+                if use_pca or self.X_norm is None:
+                    X_input = self.X_pca
+                else:
+                    X_input = self.X_norm
 
                 # Scientific Stabilizer: Cosine Metric
                 reducer = umap.UMAP(
@@ -374,19 +420,42 @@ REAL_DATA = LOADER.get_data()
 
 
 def get_layer_heatmap(sample_id, token_idx, layer):
-    """Load attention for (sample, token_idx, layer) → 11×11 spatial focus grid."""
+    """Load attention for (sample, token_idx, layer) → 11×11 spatial focus grid.
+    
+    Uses per-sample tensor files when available; falls back to the pre-computed
+    attention cache (attn_full.npz) for fresh clones without tensor data.
+    """
     sid = sample_id if isinstance(sample_id, str) else f"sample_{sample_id:03d}"
     data_dir = getattr(LOADER, 'data_dir', 'data')
     attn_path = os.path.join(data_dir, 'tensors', sid, 'latent_to_visual_attn.pt')
-    if not os.path.exists(attn_path):
+
+    token_attn = None
+
+    # Primary: per-sample file
+    if os.path.exists(attn_path):
+        attn = torch.load(attn_path, map_location='cpu')
+        if isinstance(attn, dict):
+            keys = sorted(attn.keys())
+            layer_key = layer if layer in attn else (keys[-1] if keys else 0)
+            attn = attn[layer_key]
+        token_attn = attn[token_idx, :].numpy()
+
+    # Fallback: pre-computed attention cache
+    if token_attn is None and LOADER.attn_cache is not None:
+        try:
+            layer_key = str(layer)
+            if layer_key in LOADER.attn_cache:
+                arr = LOADER.attn_cache[layer_key]
+                sample_idx = int(sid.replace('sample_', '').lstrip('0') or '0')
+                if sample_idx < arr.shape[0]:
+                    n_vis = int(LOADER.attn_cache.get('_nvis', [arr.shape[2]] * arr.shape[0])[sample_idx])
+                    token_attn = arr[sample_idx, token_idx, :n_vis]
+        except Exception as e:
+            logging.debug(f"Attn cache fallback failed for {sid} layer {layer}: {e}")
+
+    if token_attn is None:
         return None
-    attn = torch.load(attn_path, map_location='cpu')
-    if isinstance(attn, dict):
-        keys = sorted(attn.keys())
-        if layer not in attn:
-            layer = keys[-1] if keys else 0
-        attn = attn[layer]
-    token_attn = attn[token_idx, :].numpy()
+
     n_vis = len(token_attn)
     side = int(np.sqrt(n_vis))
     if side * side == n_vis:
