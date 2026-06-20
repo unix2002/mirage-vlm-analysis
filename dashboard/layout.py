@@ -9,9 +9,7 @@ from .data_loader import LOADER
 def create_header():
     return dbc.Row([
         dbc.Col(html.H4("Latent Reasoning VLM Analysis",
-                className="text-primary m-0"), width=8),
-        dbc.Col(html.Div("System Active",
-                className="text-right text-muted small"), width=4),
+                className="text-primary m-0"), width=12),
     ], className="py-2 border-bottom bg-light", style={'height': '5vh'})
 
 
@@ -55,13 +53,6 @@ def create_sidebar():
                         className="p-0"
                     ),
                 ], className="mb-2"),
-
-                dbc.Checkbox(
-                    id="umap-pca-toggle",
-                    label="PCA Denoising (Pre-process)",
-                    value=True,
-                    className="small text-muted mb-2"
-                ),
 
                 dbc.Checkbox(
                     id="umap-flippers-toggle",

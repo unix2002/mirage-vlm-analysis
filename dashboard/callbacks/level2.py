@@ -113,12 +113,13 @@ def _kl_fingerprint(sample_id, ablated_ranks):
         ], style={'flex': 1, 'minWidth': 0}))
 
     return html.Div([
-        html.Div('KL fingerprint — token subsets', style={
-            'fontSize': '0.5rem', 'color': '#888', 'textTransform': 'uppercase',
-            'letterSpacing': '0.08em', 'padding': '2px 4px 1px',
+        html.Div('RQ3: KL Fingerprint', style={
+            'fontSize': '0.75rem', 'color': '#333',
+            'fontFamily': '"Open Sans", verdana, arial, sans-serif',
+            'padding': '2px 4px 1px',
         }),
         html.Div('shade = KL · dots = tokens zeroed (T0–T5) · red = plan changed · hover for value', style={
-            'fontSize': '0.42rem', 'color': '#aaa', 'padding': '0 4px 4px',
+            'fontSize': '0.5rem', 'color': '#666', 'padding': '0 4px 4px',
         }),
         html.Div(columns, style={
             'display': 'flex', 'gap': '3px', 'padding': '0 4px 4px', 'alignItems': 'flex-start',
@@ -191,7 +192,7 @@ def _token_grid(sample):
         )
 
     return html.Div([
-        html.Div("Spatial Focus (latent token heatmaps)", style={
+        html.Div("Spatial Focus (latent token heatmaps — clickable)", style={
             'fontSize': '0.55rem', 'color': '#9ca3af',
             'textTransform': 'uppercase', 'letterSpacing': '0.05em',
             'padding': '1px 4px', 'flexShrink': 0,
@@ -265,11 +266,12 @@ def _dose_response_graph(sample_id, ablated_ranks):
                              hoverinfo='skip', showlegend=False))
     fig.add_trace(go.Scatter(x=ks, y=[r['kl_median'] for r in rows], mode='lines+markers',
                              line=dict(color='#06b6d4', width=2), marker=dict(size=5),
-                             hovertemplate='zero %{x} tokens<br>median KL %{y:.4f}<extra></extra>'))
+                             hovertemplate='zero %{x} tokens<br>median KL %{y:.4f}<extra></extra>',
+                             name='median KL', showlegend=True))
     fig.add_trace(go.Scatter(x=ks, y=[r['em_flip_pct'] for r in rows], mode='lines', yaxis='y2',
                              line=dict(color='#dc3545', width=1.5, dash='dash'),
                              hovertemplate='text flip %{y:.0f}%<extra></extra>',
-                             name='text flip', showlegend=True))
+                             showlegend=False))
     fig.add_trace(go.Scatter(x=ks, y=[r['plan_flip_pct'] for r in rows], mode='lines', yaxis='y2',
                              line=dict(color='#94a3b8', width=1.5, dash='dot'),
                              hovertemplate='plan flip %{y:.0f}%<extra></extra>',
@@ -280,10 +282,13 @@ def _dose_response_graph(sample_id, ablated_ranks):
         fig.add_trace(go.Scatter(x=[cur['k']], y=[cur['kl']], mode='markers',
                                  marker=dict(size=11, color='#eab308',
                                              line=dict(color='#92400e', width=1.5)),
-                                 hovertemplate='current: zero %{x} tokens<br>KL %{y:.4f}<extra></extra>'))
+                                 hovertemplate='current: zero %{x} tokens<br>KL %{y:.4f}<extra></extra>',
+                                 name='current selection', showlegend=True))
 
     fig.update_layout(
-        margin=dict(l=30, r=28, t=6, b=18), font=dict(size=8),
+        title=dict(text='RQ3: Dose-Response Curve', font=dict(size=12)),
+        template='plotly_white',
+        margin=dict(l=30, r=28, t=40, b=18), font=dict(size=8),
         hovermode='x unified', paper_bgcolor='rgba(0,0,0,0)',
         legend=dict(orientation='v', x=1, y=1, xanchor='left', yanchor='top',
                     font=dict(size=7), bgcolor='rgba(255,255,255,0.7)'),

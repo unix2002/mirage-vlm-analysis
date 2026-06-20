@@ -205,6 +205,44 @@ def mask_for_ranks(ablated_ranks, n=6):
     return ''.join('1' if i in ranks else '0' for i in range(n))
 
 
+DEFAULT_TOKEN_LABELS = ['latent_start', 'pad_1', 'pad_2', 'pad_3', 'pad_4', 'latent_end']
+
+
+def _token_label(labels, i):
+    if labels and str(i) in labels:
+        return labels[str(i)]
+    return DEFAULT_TOKEN_LABELS[i] if i < len(DEFAULT_TOKEN_LABELS) else f'T{i}'
+
+
+def token_marginal_contributions(sample_id):
+    """Per-token individual (k=1) and mean marginal KL contribution from combinatorial data.
+
+    Individual = KL when zeroing only that token.
+    Marginal = average increase in KL from adding this token to subsets without it.
+    Returns a list of dicts or None.
+    """
+    plans = load_ablated_plans(sample_id)
+    if not plans:
+        return None
+    n = plans.get('n', 6)
+    labels = plans.get('token_labels')
+    klof = {m: s.get('kl_mean', 0.0) for m, s in plans['subsets'].items()}
+
+    out = []
+    for i in range(n):
+        single = '0' * i + '1' + '0' * (n - i - 1)
+        deltas = [klof[m[:i] + '1' + m[i + 1:]] - kl
+                  for m, kl in klof.items()
+                  if m[i] == '0' and (m[:i] + '1' + m[i + 1:]) in klof]
+        out.append({
+            'rank': i,
+            'label': _token_label(labels, i),
+            'individual': klof.get(single, 0.0),
+            'marginal': sum(deltas) / len(deltas) if deltas else 0.0,
+        })
+    return out
+
+
 def sample_dose_response(sample_id):
     """Per-k KL distribution and flip rates for one sample. Returns {'rows': [...]} or None."""
     plans = load_ablated_plans(sample_id)

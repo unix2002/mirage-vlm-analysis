@@ -8,13 +8,12 @@ def register_level1_callbacks(app):
         Output('level1-scatter', 'figure'),
         [Input('umap-neighbors-slider', 'value'),
          Input('umap-dist-slider', 'value'),
-         Input('umap-pca-toggle', 'value'),
          Input('umap-color-dropdown', 'value'),
          Input('umap-flippers-toggle', 'value'),
          Input('level1-scatter', 'relayoutData')],
         [State('level1-scatter', 'figure')]
     )
-    def update_umap(n_neighbors, min_dist, use_pca, color_metric, highlight_flippers, relayout_data, current_fig):
+    def update_umap(n_neighbors, min_dist, color_metric, highlight_flippers, relayout_data, current_fig):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
         
@@ -66,7 +65,7 @@ def register_level1_callbacks(app):
             return current_fig
 
         # Otherwise (parameter sliders changed), recompute everything from scratch
-        updated_data = LOADER.recompute_umap(n_neighbors, min_dist, use_pca=use_pca)
+        updated_data = LOADER.recompute_umap(n_neighbors, min_dist, use_pca=True)
         new_fig = create_level1_landscape(updated_data, color_metric=color_metric, zoom_level=1.0, highlight_flippers=highlight_flippers)
         
         return new_fig

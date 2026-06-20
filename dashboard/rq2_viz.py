@@ -55,8 +55,8 @@ def build_rq2_static_bar(probe_results=None):
             y=[chance, chance],
             mode='lines',
             line=dict(dash='dash', color='#b22222', width=1.5),
-            hovertemplate=f'Chance = {chance:.3f}<extra></extra>',
-            name='chance',
+            hovertemplate=f'Random baseline = {chance:.3f}<extra></extra>',
+            name='Random Baseline',
             showlegend=True,
             hoverlabel=dict(bgcolor='#b22222'),
         )
