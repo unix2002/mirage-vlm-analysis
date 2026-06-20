@@ -1,7 +1,7 @@
 import dash_bootstrap_components as dbc
 from dash import html, dcc
 from .components.level1_landscape import create_level1_landscape
-from .components.level2_path import create_level2_top, create_level2_bottom
+from .components.level2_path import create_level2_top, create_level2_bottom, create_level2_probing_row
 from .components.level3_detail import create_level3_detail
 from .mock_data import MOCK_DATA
 
@@ -107,6 +107,7 @@ def create_main_content():
             ),
             dbc.CardBody(html.Div([
                 create_level2_top(),
+                create_level2_probing_row(),
                 create_level2_bottom(),
             ], style={'display': 'flex', 'flexDirection': 'column', 'height': '100%'}), className="p-1")
         ], style={'height': '55vh'}, className="mb-2"),

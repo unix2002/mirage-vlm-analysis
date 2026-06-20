@@ -14,6 +14,7 @@ from .ablation_v2 import (
     sample_dose_response, token_marginal_contributions, current_combo_metrics, mask_for_ranks,
     toggle_rank, subset_lattice,
 )
+from ..rq2_viz import build_rq2_static_bar, build_rq2_dynamic_grid
 
 
 def _load_maze_image(path):
@@ -80,10 +81,11 @@ def _kl_fingerprint(sample_id, ablated_ranks):
         label = '+'.join('T' + str(r) for r in c['ranks'])
         return html.Div(
             [_dot(i in c['ranks']) for i in range(n)],
-            title=f"{label}  ·  KL {c['kl']:.5f}",
+            id={'type': 'fingerprint-cell', 'mask': c['mask']}, n_clicks=0,
+            title=f"{label}  ·  KL {c['kl']:.5f}  ·  click to ablate this set",
             style={
                 'display': 'flex', 'gap': '1px', 'justifyContent': 'center', 'alignItems': 'center',
-                'padding': '3px 2px', 'borderRadius': '3px',
+                'padding': '3px 2px', 'borderRadius': '3px', 'cursor': 'pointer',
                 'backgroundColor': f'rgba(6,182,212,{alpha:.3f})',
                 'border': f"1.5px solid {'#eab308' if selected else 'transparent'}",
             })
@@ -476,20 +478,41 @@ def register_level2_callbacks(app):
          Input('ablation-state', 'data')]
     )
     def update_kl_pane(clickData, active_tab, ablation_state):
+        if active_tab != 'ablation':
+            return html.Div(style={'height': '100%'})
         if not clickData:
             return html.Div(className='p-2')
-        if active_tab != 'ablation':
-            return html.Div([
-                html.Div("RQ2: Probe accuracy visualizations — data pending",
-                         style={'fontSize': '0.6rem', 'color': '#888', 'padding': '8px',
-                                'textTransform': 'uppercase', 'letterSpacing': '0.05em'}),
-                html.Div(id='rq2-static-bar-placeholder'),
-                html.Div(id='rq2-dynamic-grid-placeholder'),
-            ], style={'height': '100%'})
         sample_id = clickData['points'][0]['hovertext']
         ablated = (ablation_state or {}).get('ablated_ranks', [])
         return html.Div(_kl_fingerprint(sample_id, ablated),
                         style={'flex': 1, 'minWidth': 0, 'overflow': 'auto', 'height': '100%'})
+
+    @app.callback(
+        Output('level2-probing-pane', 'children'),
+        [Input('level1-scatter', 'clickData'),
+         Input('level2-tab-selector', 'value')]
+    )
+    def update_probing_pane(clickData, active_tab):
+        if active_tab != 'probing':
+            return html.Div()
+        if not clickData:
+            return html.Div("Select a Sample (Level 1)", style={
+                'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center',
+                'height': '100%', 'color': '#888', 'fontSize': '0.65rem',
+                'textTransform': 'uppercase', 'letterSpacing': '0.05em',
+                'padding': '8px',
+            })
+        sample_id = clickData['points'][0]['hovertext']
+        return html.Div([
+            dcc.Graph(id='rq2-static-bar',
+                      figure=build_rq2_static_bar(),
+                      config={'responsive': True},
+                      style={'flex': 1, 'minWidth': 0}),
+            dcc.Graph(id='rq2-dynamic-grid',
+                      figure=build_rq2_dynamic_grid(sample_id),
+                      config={'responsive': True},
+                      style={'flex': 1, 'minWidth': 0}),
+        ], style={'display': 'flex', 'flexDirection': 'row', 'height': '100%'})
 
     @app.callback(
         Output('level2-plan-status-row', 'children'),
@@ -552,4 +575,27 @@ def register_level2_callbacks(app):
         sample_id = clickData['points'][0]['hovertext']
         ranks = (ablation_state or {}).get('ablated_ranks', [])
         new_ranks, _ = toggle_rank(sample_id, ranks, rank)
+        return {'ablated_ranks': new_ranks}
+
+    @app.callback(
+        Output('ablation-state', 'data', allow_duplicate=True),
+        Input({'type': 'fingerprint-cell', 'mask': ALL}, 'n_clicks'),
+        State('ablation-state', 'data'),
+        prevent_initial_call=True,
+    )
+    def set_ablation_from_fingerprint(_n_clicks, ablation_state):
+        ctx = callback_context
+        if not ctx.triggered:
+            return no_update
+        trig = ctx.triggered[0]
+        if not trig['value']:  # recreation / no real click
+            return no_update
+        try:
+            mask = json.loads(trig['prop_id'].split('.n_clicks')[0])['mask']
+        except Exception:
+            return no_update
+        ranks = [i for i, b in enumerate(mask) if b == '1']
+        current = sorted((ablation_state or {}).get('ablated_ranks', []))
+        # click the already-selected subset to clear it
+        new_ranks = [] if ranks == current else ranks
         return {'ablated_ranks': new_ranks}

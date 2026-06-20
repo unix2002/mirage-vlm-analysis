@@ -41,3 +41,10 @@ def create_level2_bottom():
                      style={'height': '100%', 'overflow': 'auto'}),
             width=5, className='h-100'),
     ], className="g-0", style={'flex': 1, 'minHeight': 0, 'overflow': 'hidden'})
+
+
+def create_level2_probing_row():
+    """Full-width probing row: RQ2 bar chart + decodability grid side by side."""
+    return dbc.Row([
+        dbc.Col(html.Div(id='level2-probing-pane'), width=12),
+    ], className="g-0", style={'flexShrink': 0})

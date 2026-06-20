@@ -3,25 +3,32 @@ from pathlib import Path
 import numpy as np
 import plotly.graph_objects as go
 
-# Paths provided by teammate
-PROBE_RESULTS_PATH = Path("/home/scur0241/gerrit/mirage-vlm-analysis-fresh/data/processed/rq2/probe_results.json")
-PER_SAMPLE_RESULTS_PATH = Path("/home/scur0241/gerrit/mirage-vlm-analysis-fresh/data/processed/rq2/probe_results_per_sample.json")
+# Paths — update these to match your environment
+PROBE_RESULTS_PATH = Path("data/processed/rq2/probe_results.json")
+PER_SAMPLE_RESULTS_PATH = Path("data/processed/rq2/probe_results_per_sample.json")
 
 RQ2_GRID_DIRECTIONS = ["LEFT", "DOWN", "RIGHT", "UP"]
 
 def load_rq2_data():
-    """Load both static and per-sample probe results."""
-    with open(PROBE_RESULTS_PATH, "r", encoding="utf-8") as f:
-        static = json.load(f)
-    with open(PER_SAMPLE_RESULTS_PATH, "r", encoding="utf-8") as f:
-        per_sample = json.load(f)
-    return static, per_sample
+    """Load both static and per-sample probe results. Returns (None, None) on failure."""
+    try:
+        with open(PROBE_RESULTS_PATH, "r", encoding="utf-8") as f:
+            static = json.load(f)
+        with open(PER_SAMPLE_RESULTS_PATH, "r", encoding="utf-8") as f:
+            per_sample = json.load(f)
+        return static, per_sample
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return None, None
 
 def build_rq2_static_bar(probe_results=None):
     """Build the static layer-wise decodability bar chart."""
     if probe_results is None:
         probe_results, _ = load_rq2_data()
-        
+    if probe_results is None:
+        return go.Figure().update_layout(
+            title=dict(text="RQ2: Probe data not found", font=dict(size=12)),
+            template="plotly_white", height=300)
+
     layers = [int(x) for x in probe_results["layers"]]
     y = [float(probe_results["per_layer"][str(layer)]["all_tokens_concat"]) for layer in layers]
     chance = float(probe_results.get("chance_baseline", 0.25))
@@ -49,7 +56,7 @@ def build_rq2_static_bar(probe_results=None):
         xaxis_title="Layer",
         yaxis_title="Accuracy",
         template="plotly_white",
-        height=300,
+        height=270,
         margin=dict(l=40, r=20, t=40, b=40)
     )
     return fig
@@ -58,7 +65,11 @@ def build_rq2_dynamic_grid(sample_id, layer=26, per_sample_payload=None):
     """Build the sequence-wise decodability grid for a specific sample."""
     if per_sample_payload is None:
         _, per_sample_payload = load_rq2_data()
-        
+    if per_sample_payload is None:
+        return go.Figure().update_layout(
+            title=dict(text="RQ2: Probe data not found", font=dict(size=12)),
+            template="plotly_white", height=400)
+
     samples = per_sample_payload.get("per_sample", {})
     
     # Handle sample_id mapping (numeric string vs sample_XXX)
@@ -165,7 +176,7 @@ def build_rq2_dynamic_grid(sample_id, layer=26, per_sample_payload=None):
         xaxis_title="Direction",
         yaxis_title="Sequence Step",
         template="plotly_white",
-        height=400,
+        height=360,
         margin=dict(l=40, r=20, t=40, b=40)
     )
     fig.update_yaxes(autorange="reversed")
