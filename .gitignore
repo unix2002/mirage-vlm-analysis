@@ -17,17 +17,18 @@ __pycache__/
 .env
 .pytest_cache/
 
-# Data (except aggregate JSONs)
-data/extracted/
-data/ablation/*/sample_*/
-data/vsp_spatial_planning/img/
-data/metadata.json
+# Data directories (large, stored externally)
 data/tensors/
-data/vsp_spatial_planning.tar.gz
-data/ablation_v2/combos/
-data/ablation_v2/results.json
-data/ablation_v2/combos_all6.json
+data/vsp_spatial_planning/
+data/examples/
 data/ablation_v2/ablated_plans/
+data/metadata.json
+
+# Dead/stale files
+GEMINI.md
+src/
+scripts/
+ablation/
 
 # Logs
 logs/

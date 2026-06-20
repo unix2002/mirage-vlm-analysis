@@ -1,6 +1,5 @@
 import base64
 import json
-import math
 import tarfile
 from pathlib import Path
 from functools import lru_cache
@@ -11,8 +10,8 @@ import plotly.graph_objects as go
 from ..data_loader import LOADER
 from ..gen_data import reroute_plan
 from .ablation_v2 import (
-    load_moves, load_combo_dist, load_clean_plan, load_per_token_summary,
-    sample_dose_response, token_marginal_contributions, current_combo_metrics, mask_for_ranks,
+    load_moves, load_combo_dist, load_clean_plan,
+    sample_dose_response, current_combo_metrics, mask_for_ranks,
     toggle_rank, subset_lattice,
 )
 from ..rq2_viz import build_rq2_static_bar, build_rq2_dynamic_grid
@@ -208,15 +207,6 @@ def _token_grid(sample):
 _DIR_GLYPH = {'UP': '↑', 'DOWN': '↓', 'LEFT': '←', 'RIGHT': '→'}
 
 
-def _compute_move_kl(clean_dist, ablated_dist):
-    kls = []
-    for d in ('UP', 'DOWN', 'LEFT', 'RIGHT'):
-        c = clean_dist.get(d, 1e-9) or 1e-9
-        a = ablated_dist.get(d, 1e-9) or 1e-9
-        kls.append(c * math.log(c / a))
-    return sum(kls)
-
-
 def _plan_row(clean_plan, mean_clean_conf, mean_abl_conf, new_plan=None):
     """Predicted-plan label with direction glyphs in a subtle box.
 
@@ -252,78 +242,6 @@ def _plan_row(clean_plan, mean_clean_conf, mean_abl_conf, new_plan=None):
 
     return html.Div(children, style={
         'display': 'flex', 'flexDirection': 'column', 'alignItems': 'center', 'padding': '4px 0'})
-
-
-def _token_contribution_strip(sample_id, ablated_ranks):
-    """Six per-latent-token cells showing marginal KL contribution.
-
-    Individually every token is ~0; the marginal contribution (effect of adding
-    the token to a subset) is where the structure lives. Selected tokens are
-    highlighted in the ablation colour.
-
-    Falls back to single-token KL values from results.json when the full
-    combinatorial ablated_plans data is unavailable.
-    """
-    contribs = token_marginal_contributions(sample_id)
-    if not contribs:
-        # Fallback: build a simple strip from per-token zero_token_* results.
-        contribs = []
-        for rank in range(6):
-            entry, err = load_per_token_summary(sample_id, rank)
-            if entry is None:
-                continue
-            kl = entry.get('kl_mean', 0.0)
-            contribs.append({
-                'rank': rank,
-                'label': f'T{rank}',
-                'individual': kl,
-                'marginal': kl,
-            })
-    if not contribs:
-        return html.Div('No per-token data', className='small text-muted', style={'padding': '4px 8px'})
-
-    max_marg = max((c['marginal'] for c in contribs), default=0.0) or 1e-9
-    cells = []
-    for c in contribs:
-        selected = c['rank'] in ablated_ranks
-        frac = max(0.0, c['marginal'] / max_marg)
-        cells.append(html.Div([
-            html.Div([
-                html.Span(f"T{c['rank']}", style={
-                    'fontSize': '0.6rem', 'fontWeight': 'bold', 'fontFamily': 'monospace',
-                    'color': '#b45309' if selected else '#475569',
-                    'marginRight': '4px',
-                }),
-                html.Span(c['label'], style={
-                    'fontSize': '0.4rem', 'color': '#94a3b8',
-                    'whiteSpace': 'nowrap', 'overflow': 'hidden', 'textOverflow': 'ellipsis',
-                }),
-            ], style={'display': 'flex', 'alignItems': 'baseline'}),
-            html.Div(style={
-                'position': 'relative', 'height': '5px', 'marginTop': '2px',
-                'backgroundColor': '#f0f0f0', 'borderRadius': '2px', 'overflow': 'hidden',
-            }, children=[html.Div(style={
-                'position': 'absolute', 'inset': 0, 'width': f'{frac * 100:.0f}%',
-                'backgroundColor': '#eab308' if selected else '#06b6d4', 'borderRadius': '2px',
-            })]),
-            html.Div(f"{c['marginal']:.3f}", style={
-                'fontSize': '0.45rem', 'color': '#64748b', 'fontFamily': 'monospace', 'marginTop': '1px',
-            }),
-        ], id={'type': 'token-contrib', 'rank': c['rank']}, n_clicks=0, style={
-            'flexShrink': 0, 'padding': '2px 3px', 'cursor': 'pointer',
-            'border': f"1px solid {'#eab308' if selected else '#e9ecef'}",
-            'borderRadius': '4px',
-            'backgroundColor': '#fffbeb' if selected else '#fafafa',
-        }))
-
-    return html.Div([
-        html.Div('Marginal KL', style={
-            'fontSize': '0.45rem', 'color': '#888',
-            'textTransform': 'uppercase', 'letterSpacing': '0.05em',
-            'textAlign': 'center', 'flexShrink': 0, 'marginBottom': '2px',
-        }),
-        html.Div(cells, style={'display': 'flex', 'flexDirection': 'column', 'gap': '2px', 'flex': 1}),
-    ], style={'display': 'flex', 'flexDirection': 'column', 'padding': '2px 4px'})
 
 
 def _dose_response_graph(sample_id, ablated_ranks):
@@ -377,58 +295,6 @@ def _dose_response_graph(sample_id, ablated_ranks):
                  style={'flex': 1, 'minHeight': 0, 'overflow': 'hidden'}),
     ], style={'height': '32vh', 'display': 'flex',
               'flexDirection': 'column', 'padding': '0 4px'})
-
-
-def _flip_status_bar(sample_id, ablated_ranks):
-    """Compact visual bar showing KL intensity + plan-flip badge for the current combo."""
-    cur = current_combo_metrics(sample_id, ablated_ranks)
-    if not cur:
-        return None
-
-    def _badge(text, flipped):
-        on = bool(flipped)
-        return html.Span(text, style={
-            'fontSize': '0.58rem', 'fontFamily': 'monospace', 'padding': '1px 7px',
-            'borderRadius': '3px', 'whiteSpace': 'nowrap',
-            'color': '#b91c1c' if on else '#15803d',
-            'backgroundColor': '#fee2e2' if on else '#dcfce7',
-        })
-
-    kl_max = max(cur['kl'], 0.001)
-    kl_frac = min(1.0, cur['kl'] / (kl_max * 2))
-    bar_color = '#eab308' if cur['kl'] > 0.005 else '#06b6d4'
-
-    return html.Div([
-        html.Div(f"zeroed out {cur['k']} tokens", style={
-            'fontSize': '0.6rem', 'color': '#475569', 'fontFamily': 'monospace',
-            'fontWeight': 'bold', 'whiteSpace': 'nowrap',
-            'marginRight': '8px',
-        }),
-        html.Div([
-            html.Div('KL', style={
-                'fontSize': '0.45rem', 'color': '#888', 'fontFamily': 'monospace',
-                'textTransform': 'uppercase',
-            }),
-            html.Span(f"{cur['kl']:.6f}", style={
-                'fontSize': '0.55rem', 'color': bar_color, 'fontFamily': 'monospace',
-                'fontWeight': 'bold',
-            }),
-            html.Div(style={
-                'width': '80px', 'height': '8px', 'backgroundColor': '#f0f0f0',
-                'borderRadius': '3px', 'overflow': 'hidden',
-            }, children=[html.Div(style={
-                'width': f'{kl_frac * 100:.0f}%', 'height': '100%',
-                'backgroundColor': bar_color, 'borderRadius': '3px',
-            })]),
-        ], style={
-            'display': 'flex', 'flexDirection': 'column', 'alignItems': 'center',
-            'gap': '1px', 'flex': 1, 'maxWidth': '80px',
-        }),
-        _badge('plan ' + ('flipped' if cur['plan_flipped'] else 'stable'), cur['plan_flipped']),
-    ], style={
-        'display': 'flex', 'alignItems': 'center', 'flexWrap': 'wrap', 'gap': '6px',
-        'padding': '4px 6px', 'fontSize': '0.55rem',
-    })
 
 
 def _mean_top_conf(dists):
@@ -610,29 +476,6 @@ def register_level2_callbacks(app):
         sample_id = clickData['points'][0]['hovertext']
         ablated = (ablation_state or {}).get('ablated_ranks', [])
         return _render_output_panel(sample_id, ablated, show_strip=(active_tab == 'ablation'))
-
-    @app.callback(
-        Output('ablation-state', 'data', allow_duplicate=True),
-        Input({'type': 'token-contrib', 'rank': ALL}, 'n_clicks'),
-        [State('level1-scatter', 'clickData'),
-         State('ablation-state', 'data')],
-        prevent_initial_call=True,
-    )
-    def toggle_from_strip(_n_clicks, clickData, ablation_state):
-        ctx = callback_context
-        if not ctx.triggered or not clickData:
-            return no_update
-        trig = ctx.triggered[0]
-        if not trig['value']:  # recreation / no real click
-            return no_update
-        try:
-            rank = json.loads(trig['prop_id'].split('.n_clicks')[0])['rank']
-        except Exception:
-            return no_update
-        sample_id = clickData['points'][0]['hovertext']
-        ranks = (ablation_state or {}).get('ablated_ranks', [])
-        new_ranks, _ = toggle_rank(sample_id, ranks, rank)
-        return {'ablated_ranks': new_ranks}
 
     @app.callback(
         Output('ablation-state', 'data', allow_duplicate=True),
