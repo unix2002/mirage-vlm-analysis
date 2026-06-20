@@ -8,36 +8,12 @@ from functools import lru_cache
 from dash.dependencies import Input, Output, State, ALL
 from dash import dcc, html, callback_context, no_update
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import dash_bootstrap_components as dbc
 from ..mock_data import MOCK_DATA
 from .ablation_v2 import (
     load_moves, load_combo_dist, load_clean_plan, load_per_token_summary,
     sample_dose_response, token_marginal_contributions, current_combo_metrics, mask_for_ranks,
-    toggle_rank,
+    toggle_rank, subset_lattice,
 )
-
-
-ABLATED_DATA = json.loads(Path('data/ablation_results.json').read_text())
-
-
-
-
-def _ablation_key(sample):
-    meta = sample.get('metadata', {})
-    raw_id = meta.get('sample_id', sample.get('sample_id'))
-    if isinstance(raw_id, int):
-        return str(raw_id)
-    if isinstance(raw_id, str) and raw_id.startswith('sample_'):
-        suffix = raw_id.split('sample_', 1)[1]
-        try:
-            return str(int(suffix))
-        except ValueError:
-            return suffix
-    try:
-        return str(int(str(raw_id).split('_')[-1]))
-    except Exception:
-        return str(raw_id)
 
 
 def _load_maze_image(path):
@@ -74,47 +50,68 @@ def _read_tar_member(archive_path, member_name):
         return extracted.read()
 
 
-def _ablation_summary(sample_id):
-    sample_key = str(sample_id)
-    per_sample = ABLATED_DATA.get('per_sample', {})
+def _kl_fingerprint(sample_id, ablated_ranks):
+    """The sample's combinatorial KL fingerprint: every ablation subset as a
+    cell, grouped into columns by how many tokens it zeroes (k), shaded by KL,
+    with a 6-dot glyph marking which latent tokens it contains. The subset that
+    matches the current ablation selection is outlined in amber.
 
-    modes = ['zero_out', 'shuffle', 'noise', 'random', 'visual_zero']
-    kl_means, top1s, accs = [], [], []
-    present_modes = []
-    for mode in modes:
-        stats = per_sample.get(mode, {}).get(sample_key)
-        if stats is None:
-            continue
-        present_modes.append(mode)
-        kl_means.append(stats.get('kl_mean', 0))
-        top1s.append(stats.get('top1_agreement', 0))
-        accs.append(stats.get('gt_acc_ablated', 0))
+    All values come from the combinatorial KL data (works on train and test);
+    nothing depends on the model's answer changing.
+    """
+    lat = subset_lattice(sample_id)
+    if not lat or not lat['cells']:
+        return html.Div('No combinatorial data for this sample',
+                        className='small text-muted', style={'padding': '8px'})
 
-    if not present_modes:
-        return html.Div('No ablation results for this sample.', className='small text-muted p-2')
+    n = lat['n']
+    max_kl = lat['max_kl'] or 1e-9
+    cur_mask = mask_for_ranks(ablated_ranks, n) if ablated_ranks else None
 
-    fig = make_subplots(
-        rows=3, cols=1,
-        shared_xaxes=True,
-        subplot_titles=('KL Mean', 'Top1 Agreement', 'Acc Ablated'),
-        vertical_spacing=0.06
-    )
-    fig.add_trace(go.Bar(x=present_modes, y=kl_means, showlegend=False), row=1, col=1)
-    fig.add_trace(go.Bar(x=present_modes, y=top1s, showlegend=False), row=2, col=1)
-    fig.add_trace(go.Bar(x=present_modes, y=accs, showlegend=False), row=3, col=1)
-    fig.update_layout(
-        margin=dict(l=5, r=5, t=20, b=5),
-        font=dict(size=7),
-        hovermode=False
-    )
-    fig.update_annotations(font_size=6)
-    fig.update_xaxes(tickfont=dict(size=6), row=3, col=1)
-    for r in (1, 2):
-        fig.update_xaxes(visible=False, row=r, col=1)
-    for r in (1, 2, 3):
-        fig.update_yaxes(tickfont=dict(size=6), row=r, col=1)
+    def _dot(filled):
+        return html.Span(style={
+            'width': '4px', 'height': '4px', 'borderRadius': '50%', 'display': 'inline-block',
+            'backgroundColor': '#0f172a' if filled else 'rgba(15,23,42,0.18)',
+        })
 
-    return dcc.Graph(figure=fig, config={'displayModeBar': False}, style={'height': '100%', 'width': '100%'})
+    def _cell(c):
+        alpha = 0.12 + 0.88 * (c['kl'] / max_kl)
+        selected = cur_mask is not None and c['mask'] == cur_mask
+        label = '+'.join('T' + str(r) for r in c['ranks'])
+        return html.Div(
+            [_dot(i in c['ranks']) for i in range(n)],
+            title=f"{label}  ·  KL {c['kl']:.5f}",
+            style={
+                'display': 'flex', 'gap': '1px', 'justifyContent': 'center', 'alignItems': 'center',
+                'padding': '3px 2px', 'borderRadius': '3px',
+                'backgroundColor': f'rgba(6,182,212,{alpha:.3f})',
+                'border': f"1.5px solid {'#eab308' if selected else 'transparent'}",
+            })
+
+    columns = []
+    for k in range(1, n + 1):
+        kcells = sorted((c for c in lat['cells'] if c['k'] == k), key=lambda c: -c['kl'])
+        columns.append(html.Div([
+            html.Div(f'k{k}', style={
+                'fontSize': '0.45rem', 'color': '#94a3b8', 'fontFamily': 'monospace',
+                'textAlign': 'center', 'marginBottom': '2px',
+            }),
+            html.Div([_cell(c) for c in kcells],
+                     style={'display': 'flex', 'flexDirection': 'column', 'gap': '2px'}),
+        ], style={'flex': 1, 'minWidth': 0}))
+
+    return html.Div([
+        html.Div('KL fingerprint — token subsets', style={
+            'fontSize': '0.5rem', 'color': '#888', 'textTransform': 'uppercase',
+            'letterSpacing': '0.08em', 'padding': '2px 4px 1px',
+        }),
+        html.Div('shade = KL · dots = latent tokens zeroed (T0–T5) · hover for value', style={
+            'fontSize': '0.42rem', 'color': '#aaa', 'padding': '0 4px 4px',
+        }),
+        html.Div(columns, style={
+            'display': 'flex', 'gap': '3px', 'padding': '0 4px 4px', 'alignItems': 'flex-start',
+        }),
+    ], style={'height': '100%'})
 
 
 def _maze_view(sample):
@@ -490,11 +487,9 @@ def register_level2_callbacks(app):
                 html.Div(id='rq2-dynamic-grid-placeholder'),
             ], style={'height': '100%'})
         sample_id = clickData['points'][0]['hovertext']
-        sample = next(s for s in MOCK_DATA if s['sample_id'] == sample_id)
-        sid = _ablation_key(sample)
         ablated = (ablation_state or {}).get('ablated_ranks', [])
-        return html.Div(_ablation_summary(sid),
-                        style={'flex': 1, 'minWidth': 0, 'overflow': 'hidden', 'height': '100%'})
+        return html.Div(_kl_fingerprint(sample_id, ablated),
+                        style={'flex': 1, 'minWidth': 0, 'overflow': 'auto', 'height': '100%'})
 
     @app.callback(
         Output('level2-plan-status-row', 'children'),

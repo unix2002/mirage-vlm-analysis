@@ -360,3 +360,26 @@ def toggle_rank(sample_id, current_ranks, rank):
 
     ranks.append(rank)
     return sorted(ranks), ablation_status(ranks)
+
+
+def subset_lattice(sample_id):
+    """Every ablation subset for one sample, for the KL-fingerprint view.
+
+    Returns {'cells': [{'mask', 'k', 'kl', 'ranks'}, ...], 'max_kl', 'n'} or None.
+    Built straight from the 63 self-consistent ablated_plans subsets (no rerun).
+    """
+    plans = load_ablated_plans(sample_id)
+    if not plans:
+        return None
+    n = plans.get('n', 6)
+    cells, max_kl = [], 0.0
+    for mask, s in plans['subsets'].items():
+        kl = s.get('kl_mean', 0.0)
+        max_kl = max(max_kl, kl)
+        cells.append({
+            'mask': mask,
+            'k': mask.count('1'),
+            'kl': kl,
+            'ranks': [i for i, b in enumerate(mask) if b == '1'],
+        })
+    return {'cells': cells, 'max_kl': max_kl, 'n': n}
