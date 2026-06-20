@@ -44,8 +44,8 @@ def test_id_integrity():
         for inp in cb['inputs']:
             cid = getattr(inp, 'component_id', None)
             if isinstance(cid, str):
-                # Skip dynamically created IDs
-                if cid not in ['level1-scatter', 'ablate-btn']:
+                # Skip dynamically created IDs; only level1-scatter is a known static input.
+                if cid != 'level1-scatter':
                      continue
                 assert cid in layout_ids, f"Input ID '{cid}' not found in layout"
         
@@ -60,13 +60,17 @@ def test_static_id_list():
     layout = create_layout()
     required_ids = [
         'level1-scatter',
-        'level2-image-pane',
-        'level2-flow-pane',
-        'token-heatmap',
-        'token-probe-bar',
-        'token-dependency-curve',
-        'ablate-btn',
-        'ablate-output'
+        'level2-tabs',
+        'level2-ablation-pane',
+        'level2-ablation-tab',
+        'level2-maze-pane',
+        'level2-token-grid',
+        'token-detail-heatmap',
+        'token-detail-probe-bar',
+        'token-detail-dependency-curve',
+        'level3-instructions',
+        'current-token-state',
+        'ablation-state',
     ]
     
     def find_id(node, target_id):

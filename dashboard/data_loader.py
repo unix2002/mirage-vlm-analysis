@@ -85,7 +85,10 @@ class RealDataLoader:
         if not self.metadata:
             return []
 
-        samples_to_process = self.metadata[:1000]
+        # Load all available samples; UMAP projection is deferred until first use
+        # to avoid a startup RAM spike. Override with DASHBOARD_MAX_SAMPLES if needed.
+        max_samples = int(os.environ.get('DASHBOARD_MAX_SAMPLES', 1000))
+        samples_to_process = self.metadata[:max_samples]
         processed = []
         all_hidden_states = []
         self.valid_indices = []
@@ -130,7 +133,8 @@ class RealDataLoader:
                             side = int(np.sqrt(n_vis))
                             if side * side == n_vis:
                                 spatial_focus = token_attn.reshape(side, side).tolist()
-                        except: pass
+                        except Exception:
+                            pass
 
                     if spatial_focus is None:
                         spatial_focus = np.zeros((11, 11), dtype=np.float32).tolist()
@@ -216,8 +220,8 @@ class RealDataLoader:
             pca = PCA(n_components=n_comp, random_state=42)
             self.X_pca = pca.fit_transform(self.X_norm)
 
-            # Initial projection with defaults
-            self.recompute_umap(n_neighbors=5, min_dist=0.3, use_pca=False, processed_override=processed)
+            # UMAP is computed lazily on first callback instead of at startup to avoid RAM spikes.
+            logging.info("Hidden-state cache ready; UMAP projection will be computed on demand.")
         else:
             if not HAS_UMAP:
                 logging.error("UMAP library not installed. Points will remain at origin.")

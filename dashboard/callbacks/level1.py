@@ -1,5 +1,4 @@
 from dash.dependencies import Input, Output
-import dash
 from ..data_loader import LOADER
 from ..components.level1_landscape import create_level1_landscape
 

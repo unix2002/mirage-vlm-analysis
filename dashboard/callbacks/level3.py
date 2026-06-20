@@ -4,8 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import json
 from ..mock_data import MOCK_DATA
-from .ablation_v2 import load_per_token_summary, build_bitmask, load_combo_file, _get_token_positions
-from dash import html
+from .ablation_v2 import load_per_token_summary
 
 
 def _extract_active_click(token_clicks):
@@ -15,6 +14,15 @@ def _extract_active_click(token_clicks):
         if item:
             return item
     return None
+
+
+def _style_detail_fig(fig, title):
+    """Apply the shared compact margin + title used by all Level 3 figures."""
+    fig.update_layout(
+        margin=dict(l=5, r=5, t=20, b=5),
+        title=dict(text=title, font=dict(size=10)),
+    )
+    return fig
 
 
 def update_level3_logic(token_clicks, clickData, triggered_id_full):
@@ -33,9 +41,8 @@ def update_level3_logic(token_clicks, clickData, triggered_id_full):
 
     fig_heatmap = px.imshow(
         token['spatial_focus'], color_continuous_scale='Viridis')
+    _style_detail_fig(fig_heatmap, f"RQ1: Spatial Focus Heatmap (Token {token_id})")
     fig_heatmap.update_layout(
-        margin=dict(l=5, r=5, t=20, b=5),
-        title=dict(text=f"RQ1: Spatial Focus Heatmap (Token {token_id})", font=dict(size=10)),
         coloraxis_showscale=True,
         xaxis=dict(title="Column"),
         yaxis=dict(title="Row")
@@ -46,9 +53,8 @@ def update_level3_logic(token_clicks, clickData, triggered_id_full):
     off_value = max(0.0, min(1.0, base * 0.35))
     accs = [base if d == sample['move_direction'] else off_value for d in dirs]
     fig_bar = px.bar(x=dirs, y=accs, labels={'x': 'Direction', 'y': 'Probe Accuracy'})
+    _style_detail_fig(fig_bar, f"RQ2: Directional Probe Accuracy (Token {token_id})")
     fig_bar.update_layout(
-        margin=dict(l=5, r=5, t=20, b=5),
-        title=dict(text=f"RQ2: Directional Probe Accuracy (Token {token_id})", font=dict(size=10)),
         yaxis=dict(range=[0, 1], tickfont=dict(size=8)),
         xaxis=dict(tickfont=dict(size=8))
     )
@@ -63,9 +69,8 @@ def update_level3_logic(token_clicks, clickData, triggered_id_full):
         x = list(range(10))
         kls_label = 'KL Divergence (synthetic decay)'
     fig_curve = px.line(x=x, y=kls, labels={'x': 'Position', 'y': kls_label})
+    _style_detail_fig(fig_curve, f"RQ3: Per-Position KL after Zeroing Token {token_id}")
     fig_curve.update_layout(
-        margin=dict(l=5, r=5, t=20, b=5),
-        title=dict(text=f"RQ3: Per-Position KL after Zeroing Token {token_id}", font=dict(size=10)),
         xaxis=dict(tickfont=dict(size=8)),
         yaxis=dict(tickfont=dict(size=8))
     )
@@ -74,40 +79,6 @@ def update_level3_logic(token_clicks, clickData, triggered_id_full):
     return fig_heatmap, fig_bar, fig_curve, f"Details: {token_id} ({sample_id})", store_data
 
 
-def _format_combo_output(mask, data, ablated_str):
-    kl = data['kl_mean']
-    top1 = data['top1']
-    acc = data.get('acc_abl', data.get('gt_acc_ablated', '?'))
-    nll_delta = data.get('nll_delta', data.get('gt_nll_delta', '?'))
-    em = data.get('em_abl', data.get('exact_match_ablated', '?'))
-
-    is_top1_flip = top1 < 1.0
-    is_em_flip = not em
-    has_flip = is_top1_flip or is_em_flip
-
-    if is_top1_flip:
-        label = f"⚠️ FLIP (top1={top1:.3f})"
-        color = "#dc3545"
-    elif is_em_flip:
-        label = f"⚠️ partial flip (acc={acc:.3f})"
-        color = "#fd7e14"
-    else:
-        label = "✓ stable"
-        color = "#28a745"
-
-    parts = [f"Ablated {ablated_str}",
-             f"KL={kl:.4f}", f"top1={top1:.3f}",
-             f"NLL Δ={nll_delta:.4f}"]
-
-    return html.Span([
-        html.Span(label, style={
-            'fontWeight': 'bold', 'color': color,
-            'backgroundColor': '#fff3cd' if has_flip else 'transparent',
-            'padding': '1px 6px', 'borderRadius': '3px',
-            'marginRight': '8px'
-        }),
-        " | ".join(parts)
-    ])
 
 
 def register_level3_callbacks(app):
@@ -142,58 +113,3 @@ def register_level3_callbacks(app):
 
         return update_level3_logic(active_click, clickData, json.dumps({'index': token_index}))
 
-    @app.callback(
-        [Output('ablate-output', 'children'),
-         Output('ablation-state', 'data', allow_duplicate=True)],
-        [Input('ablate-btn', 'n_clicks')],
-        [State('current-token-state', 'data'),
-         State('ablation-state', 'data')],
-        prevent_initial_call=True,
-    )
-    def toggle_ablate(n_clicks, token_state, ablation_state):
-        if not n_clicks:
-            return "", ablation_state or {'ablated_ranks': []}
-
-        state = ablation_state or {'ablated_ranks': []}
-        token_state = token_state or {}
-        sample_id = token_state.get('sample_id')
-        rank = token_state.get('token_rank')
-
-        if sample_id is None or rank is None:
-            return "Select a token first", state
-
-        ranks = list(state.get('ablated_ranks', []))
-        # If rank is already in set, remove it (toggle off)
-        if rank in ranks:
-            ranks.remove(rank)
-            if not ranks:
-                return "No tokens ablated", {'ablated_ranks': []}
-            mask, result = build_bitmask(sample_id, ranks)
-            if result is None:
-                return f"Error: {mask}", {'ablated_ranks': []}
-            ablated_str = f"T{' + T'.join(str(r) for r in ranks)}"
-            return _format_combo_output(mask, result, ablated_str), {'ablated_ranks': ranks}
-
-        # Trying to add a token — check if it's valid first
-        combo = load_combo_file(sample_id)
-        if combo is None:
-            return "Combinatorial data not available for this sample", state
-
-        token_pos_map = _get_token_positions(sample_id)
-        pos = token_pos_map.get(rank) if token_pos_map else None
-        if pos is None or pos not in combo['positions']:
-            existing = ', '.join(str(t) for t in sorted(state.get('ablated_ranks', [])))
-            valid = ', '.join(sorted(f"T{r}" for r in range(6)
-                                     if token_pos_map and r in combo['positions']))
-            return (f"Token T{rank} is not in the combinatorial study. "
-                    f"Only {valid} can be ablated together." +
-                    (f" Currently ablated: T{existing}." if existing else "")), state
-
-        ranks.append(rank)
-        ranks.sort()
-        mask, result = build_bitmask(sample_id, ranks)
-        if result is None:
-            return f"Error: {mask}", {'ablated_ranks': []}
-        ablated_str = f"T{' + T'.join(str(r) for r in ranks)}"
-        output = _format_combo_output(mask, result, ablated_str)
-        return output, {'ablated_ranks': ranks}

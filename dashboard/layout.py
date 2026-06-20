@@ -86,20 +86,36 @@ def create_main_content():
     return html.Div([
         # Level 2: Main Reasoning Path
         dbc.Card([
-            dbc.CardHeader("Level 2: Reasoning Path Analysis",
-                           className="py-1 small font-weight-bold"),
+            dbc.CardHeader(
+                html.Div([
+                    html.Span("Level 2: Reasoning Path Analysis", className="align-self-center small font-weight-bold"),
+                    dbc.RadioItems(
+                        id='level2-tab-selector',
+                        options=[
+                            {'label': 'Probing', 'value': 'probing'},
+                            {'label': 'Ablation', 'value': 'ablation'},
+                        ],
+                        value='probing',
+                        inline=True,
+                        className='ms-auto',
+                        inputClassName='btn-check',
+                        labelClassName='btn btn-outline-secondary btn-sm px-2 py-0',
+                    ),
+                ], style={'display': 'flex', 'justifyContent': 'space-between', 'alignItems': 'center'}),
+                className="py-1"
+            ),
             dbc.CardBody(html.Div([
                 create_level2_path(),
                 create_level2_bottom(),
-            ], style={'height': '100%'}), className="p-1")
-        ], style={'height': '43vh'}, className="mb-2"),
+            ], style={'display': 'flex', 'flexDirection': 'column', 'height': '100%'}), className="p-1")
+        ], style={'height': '55vh'}, className="mb-2"),
 
         # Level 3: Token Specifics
         dbc.Card([
             dbc.CardHeader(html.Div(id='level3-instructions', children="Level 3: Token Details"),
                            className="py-1 small font-weight-bold"),
             dbc.CardBody(create_level3_detail(), className="p-1")
-        ], style={'height': '43vh'})
+        ], style={'height': '31vh'})
     ])
 
 

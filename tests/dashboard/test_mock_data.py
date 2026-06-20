@@ -26,10 +26,10 @@ def test_generate_mock_data_structure():
             assert 'probe_accuracy' in token
             assert 'kl_divergence' in token
             
-            # RQ1: Spatial focus should be 14x14
+            # RQ1: Spatial focus should be 11x11
             spatial = token['spatial_focus']
-            assert len(spatial) == 14
-            assert len(spatial[0]) == 14
+            assert len(spatial) == 11
+            assert len(spatial[0]) == 11
             
             # RQ2: Probe accuracy bounds
             assert 0.0 <= token['probe_accuracy'] <= 1.0

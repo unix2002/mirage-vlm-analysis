@@ -7,7 +7,7 @@ def test_rq1_visual_heatmap_data():
     """Verify RQ1 spatial focus heatmap data bounds."""
     sample = MOCK_DATA[0]
     clickData = {'points': [{'hovertext': sample['sample_id']}]}
-    triggered_id = '{"index":"T0","type":"token-glyph"}.n_clicks'
+    triggered_id = '{"index":"T0","type":"token-heatmap"}.n_clicks'
     
     fig_heatmap, _, _, _, _ = update_level3_logic([1], clickData, triggered_id)
     
@@ -24,7 +24,7 @@ def test_rq2_visual_bar_logic():
     # Find a correct sample
     sample = next(s for s in MOCK_DATA if s['correctness'])
     clickData = {'points': [{'hovertext': sample['sample_id']}]}
-    triggered_id = '{"index":"T0","type":"token-glyph"}.n_clicks'
+    triggered_id = '{"index":"T0","type":"token-heatmap"}.n_clicks'
     
     _, fig_bar, _, _, _ = update_level3_logic([1], clickData, triggered_id)
     
@@ -41,7 +41,7 @@ def test_rq3_visual_dependency_curve():
     """Verify RQ3 causal dependency curve trend."""
     sample = MOCK_DATA[0]
     clickData = {'points': [{'hovertext': sample['sample_id']}]}
-    triggered_id = '{"index":"T0","type":"token-glyph"}.n_clicks'
+    triggered_id = '{"index":"T0","type":"token-heatmap"}.n_clicks'
     
     _, _, fig_curve, _, _ = update_level3_logic([1], clickData, triggered_id)
     
@@ -49,12 +49,16 @@ def test_rq3_visual_dependency_curve():
     # In mock logic, it's exponentially decaying: kls = [token['kl_divergence'] * np.exp(-0.2 * s) for s in steps]
     assert y_vals[0] > y_vals[-1]
 
-def test_rq3_visual_flow_heatmap():
-    """Verify RQ3 sequential flow attention matrix size."""
+def test_level2_ablation_tab():
+    """Verify Level 2 now returns an ablation tab as the third element."""
     sample = MOCK_DATA[0]
     clickData = {'points': [{'hovertext': sample['sample_id']}]}
     
-    _, fig_flow = update_level2_logic(clickData)
+    ablation_summary, maze_view, ablation_tab = update_level2_logic(clickData)
     
-    z_data = fig_flow.data[0].z
-    assert np.array(z_data).shape == (6, 6)
+    # Ablation summary is a graph for real data; for mock data it may be a placeholder.
+    assert ablation_summary is not None
+    # Maze view is an html.Div containing the maze image.
+    assert maze_view is not None
+    # Ablation tab is an html.Div with the ablation landscape.
+    assert ablation_tab is not None

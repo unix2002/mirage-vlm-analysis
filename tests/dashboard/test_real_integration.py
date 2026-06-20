@@ -45,10 +45,11 @@ def test_integration_path_handling():
     # Verify it can handle both real and fallback data dirs
     loader = RealDataLoader(data_dir='../../mirage_data/extracted')
     valid_paths = [
-        '../mirage_data/extracted', 
-        '../../mirage_data/extracted', 
-        '/gpfs/home1/scur0241/mirage_data/extracted', 
-        'data/reference'
+        '../mirage_data/extracted',
+        '../../mirage_data/extracted',
+        '/gpfs/home1/scur0241/mirage_data/extracted',
+        'data/reference',
+        'data/',
     ]
     assert loader.data_dir in valid_paths
     assert len(loader.get_data()) > 0

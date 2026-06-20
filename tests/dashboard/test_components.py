@@ -16,8 +16,7 @@ def test_level1_landscape_returns_graph():
 def test_level2_path_structure():
     component = create_level2_path()
     assert isinstance(component, dbc.Row)
-    
-    # Check for image pane and flow pane
+
     ids = []
     def find_ids(node):
         if hasattr(node, 'id') and node.id:
@@ -28,15 +27,18 @@ def test_level2_path_structure():
                     find_ids(child)
             else:
                 find_ids(node.children)
-    
+
     find_ids(component)
-    assert 'level2-image-pane' in ids
-    assert 'level2-flow-pane' in ids
+    assert 'level2-tabs' in ids
+    assert 'level2-ablation-pane' in ids
+    assert 'level2-ablation-tab' in ids
+    assert 'level2-maze-pane' in ids
+    assert 'level2-token-grid' in ids
 
 def test_level3_detail_structure():
     component = create_level3_detail()
     assert isinstance(component, html.Div)
-    
+
     ids = []
     def find_ids(node):
         if hasattr(node, 'id') and node.id:
@@ -47,9 +49,8 @@ def test_level3_detail_structure():
                     find_ids(child)
             else:
                 find_ids(node.children)
-                
+
     find_ids(component)
-    assert 'token-heatmap' in ids
-    assert 'token-probe-bar' in ids
-    assert 'token-dependency-curve' in ids
-    assert 'ablate-btn' in ids
+    assert 'token-detail-heatmap' in ids
+    assert 'token-detail-probe-bar' in ids
+    assert 'current-token-state' in ids

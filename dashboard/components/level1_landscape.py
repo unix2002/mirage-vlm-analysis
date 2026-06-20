@@ -43,6 +43,13 @@ def create_level1_landscape(data_source, color_metric='avg_kl'):
     
     df = pd.DataFrame(rows)
 
+    # If UMAP has not been computed yet (lazy startup), add tiny jitter so points
+    # are visible until the first slider interaction triggers real projection.
+    if np.allclose(df['umap_x'].values, 0.0) and np.allclose(df['umap_y'].values, 0.0):
+        rng = np.random.default_rng(42)
+        df['umap_x'] = df['umap_x'] + rng.normal(0, 0.05, len(df))
+        df['umap_y'] = df['umap_y'] + rng.normal(0, 0.05, len(df))
+
     # Resolve Color Metric Label
     metric_labels = {
         'avg_kl': 'Reasoning Intensity',

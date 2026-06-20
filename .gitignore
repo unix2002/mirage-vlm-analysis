@@ -27,6 +27,7 @@ data/vsp_spatial_planning.tar.gz
 data/ablation_v2/combos/
 data/ablation_v2/results.json
 data/ablation_v2/combos_all6.json
+data/ablation_v2/ablated_plans/
 
 # Logs
 logs/
