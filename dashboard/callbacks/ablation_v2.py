@@ -155,35 +155,6 @@ def load_clean_plan(sample_id):
             or plans.get('clean_plan'))
 
 
-def load_visual_zero_kl(sample_id):
-    """Return the visual_zero KL mean for a sample from combos_all6.json."""
-    sid = _fmt_sample_id(sample_id)
-    if _combos_all6_cache is None:
-        if not COMBOS_ALL6_PATH.exists():
-            return None
-        _ensure_combos_cached()
-    per_sample = _combos_all6_cache.get('per_sample', {})
-    vz = per_sample.get('visual_zero', {}).get(sid)
-    if vz is None:
-        return None
-    return vz.get('kl_mean')
-
-
-def load_reference_metrics(sample_id, ablated_ranks):
-    """Return (our_kl, vzero_kl) for the reference meter, or (None, None)."""
-    our_kl = 0.0
-    if len(ablated_ranks) == 1:
-        entry, _ = load_per_token_summary(sample_id, ablated_ranks[0])
-        if entry:
-            our_kl = entry.get('kl_mean', 0.0)
-    elif len(ablated_ranks) > 1:
-        _, result = build_bitmask(sample_id, ablated_ranks)
-        if result:
-            our_kl = result.get('kl_mean', 0.0)
-    vzero_kl = load_visual_zero_kl(sample_id)
-    return our_kl, vzero_kl
-
-
 def _ensure_combos_cached():
     global _combos_all6_cache
     if _combos_all6_cache is None and COMBOS_ALL6_PATH.exists():
@@ -191,7 +162,7 @@ def _ensure_combos_cached():
 
 
 def _load_ablated_plans_dist():
-    """Lazy-load ablated_plans_dist.jsonl into a dict {sample_id: entry}."""
+    """Lazy-load train_plans_gen.jsonl into a dict {sample_id: entry}."""
     global _ablated_plans_dist_cache
     if _ablated_plans_dist_cache is not None:
         return _ablated_plans_dist_cache
@@ -233,19 +204,10 @@ def load_combo_dist(sample_id, mask):
 # In ablated_plans subsets the mask is indexed by token rank (bit i = rank i),
 # so it can be built directly from the selected ranks without a position map.
 
-DEFAULT_TOKEN_LABELS = ['latent_start', 'pad_1', 'pad_2', 'pad_3', 'pad_4', 'latent_end']
-
-
 def mask_for_ranks(ablated_ranks, n=6):
     """Bitmask over token ranks 0..n-1 matching ablated_plans subset keys."""
     ranks = set(ablated_ranks)
     return ''.join('1' if i in ranks else '0' for i in range(n))
-
-
-def _token_label(labels, i):
-    if labels and str(i) in labels:
-        return labels[str(i)]
-    return DEFAULT_TOKEN_LABELS[i] if i < len(DEFAULT_TOKEN_LABELS) else f'T{i}'
 
 
 def sample_dose_response(sample_id):
@@ -290,34 +252,6 @@ def sample_dose_response(sample_id):
             'em_flip_pct': (100.0 * em[0] / em[1]) if em and em[1] else None,
         })
     return {'rows': rows, 'token_labels': plans.get('token_labels'), 'n': n}
-
-
-def token_marginal_contributions(sample_id):
-    """Per-token individual (k=1) and mean marginal KL contribution.
-
-    Marginal = average increase in KL from adding this token to a subset that
-    does not already contain it. Returns a list of dicts or None.
-    """
-    plans = load_ablated_plans(sample_id)
-    if not plans:
-        return None
-    n = plans.get('n', 6)
-    labels = plans.get('token_labels')
-    klof = {m: s.get('kl_mean', 0.0) for m, s in plans['subsets'].items()}
-
-    out = []
-    for i in range(n):
-        single = '0' * i + '1' + '0' * (n - i - 1)
-        deltas = [klof[m[:i] + '1' + m[i + 1:]] - kl
-                  for m, kl in klof.items()
-                  if m[i] == '0' and (m[:i] + '1' + m[i + 1:]) in klof]
-        out.append({
-            'rank': i,
-            'label': _token_label(labels, i),
-            'individual': klof.get(single, 0.0),
-            'marginal': sum(deltas) / len(deltas) if deltas else 0.0,
-        })
-    return out
 
 
 def current_combo_metrics(sample_id, ablated_ranks):
