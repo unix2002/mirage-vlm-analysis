@@ -21,6 +21,9 @@ __pycache__/
 data/extracted/
 data/ablation/*/sample_*/
 data/vsp_spatial_planning/img/
+data/metadata.json
+data/tensors/
+data/vsp_spatial_planning.tar.gz
 
 # Logs
 logs/

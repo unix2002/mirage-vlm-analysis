@@ -4,7 +4,7 @@ Interactive visual analytics for inspecting latent reasoning in vision-language 
 4-week project, 4 roles (A/B/C/D).
 
 **Compute:** Snellius (`scur0259@snellius.surf.nl`)  
-**Data root:** `/home/scur0259/mirage/data/extracted/` (50 samples, 7.9 GB)  
+**Data root:** `/home/scur0259/mirage/data/extracted/` (996 samples, 16 GB)  
 **Model:** Qwen2.5-VL-7B-Instruct + latent tokens (= Mirage)  
 **Base codebase:** [UMass-Embodied-AGI/Mirage](https://github.com/UMass-Embodied-AGI/Mirage)
 
@@ -12,20 +12,51 @@ Interactive visual analytics for inspecting latent reasoning in vision-language 
 
 ## 🚀 Quick Start: Running the Dashboard
 
-To run the interactive Dash dashboard with simulated data (50 samples):
+### Prerequisites
 
-1. **Ensure dependencies are installed:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+```bash
+pip install -r requirements.txt
+```
 
-2. **Run the dashboard:**
-   ```bash
-   python3 run_dashboard.py
-   ```
+### Data Setup
 
-3. **Access the UI:**
-   Open your browser and navigate to `http://127.0.0.1:8050`.
+The dashboard needs two groups of files in `data/`:
+
+**From git** (cloned automatically):
+```
+data/ablation_results.json
+data/train_direct.jsonl
+```
+
+**From Google Drive** (shared privately — ask the team for the link) and place in `data/`:
+
+| File | Size | Notes |
+|------|------|-------|
+| `data/metadata.json` | 2.7 MB | Sample index (996 entries) |
+| `data/tensors/` | 16 GB total | Per-sample `.pt` files |
+| `data/vsp_spatial_planning.tar.gz` | 42 MB | Maze images — **do not unpack**, read directly by the dashboard |
+
+The final `data/` directory should look like:
+```
+data/
+├── ablation_results.json          (git)
+├── train_direct.jsonl             (git)
+├── metadata.json                  (Drive)
+├── tensors/                       (Drive — 996 sample dirs)
+│   ├── sample_000/
+│   │   ├── hidden_states.pt
+│   │   └── latent_to_visual_attn.pt
+│   └── ...
+└── vsp_spatial_planning.tar.gz    (Drive — keep as .tar.gz)
+```
+
+### Run
+
+```bash
+python3 run_dashboard.py
+```
+
+Open `http://127.0.0.1:8050` in your browser.
 
 ---
 
@@ -66,9 +97,12 @@ The codebase is organized into a modular package structure to ensure research re
 │   ├── callbacks.py                      ← Interactive logic & RQ mapping
 │   ├── layout.py                         ← Full-screen responsive layout
 │   └── mock_data.py                      ← Simulated data generator
-├── data/                                 ← Data Management
-│   ├── reference/                        ← Raw reference tensors
-│   └── processed/                        ← Processed analysis results
+├── data/                                 ← Data (flat structure)
+│   ├── ablation_results.json             ← Tracked in git
+│   ├── train_direct.jsonl                ← Tracked in git
+│   ├── metadata.json                     ← Shared via Drive (gitignored)
+│   ├── tensors/                          ← Shared via Drive (gitignored)
+│   └── vsp_spatial_planning.tar.gz       ← Shared via Drive (gitignored)
 ├── tests/                                ← "Bulletproof" Test Suite
 ├── run_dashboard.py                      ← Unified App Entry Point
 ├── requirements.txt                      ← Project Dependencies
@@ -122,7 +156,7 @@ determinism is critical for ablation (RQ3): the latent region can be reliably ta
 
 The dashboard is structured into three interactive levels mapped to the project RQs:
 
-- **Level 1: Sample Landscape**: UMAP clustering of 50 samples by correctness and move direction.
+- **Level 1: Sample Landscape**: UMAP clustering of 996 samples by correctness and move direction.
 - **Level 2: Reasoning Path**: 
   - **Image-Anchored View**: Latent token "glyphs" overlaid on the maze. (Glyph Size = RQ3 Causal Dependence; Color = RQ2 Information Content).
   - **Sequential Flow**: Attention weight matrix between tokens.
@@ -143,37 +177,27 @@ Tests cover **ID Integrity**, **Exhaustive Data Robustness**, and **Visual Logic
 
 ---
 
-## Extracted Data (50 Samples)
+## Extracted Data (996 Samples)
 
 ### Location
 
 ```
 /home/scur0259/mirage/data/extracted/
-├── metadata.json              ← 50-sample index (133 KB)
+├── metadata.json              ← 996-sample index (2.7 MB)
 └── tensors/
-    ├── sample_000/             ← 4 .pt files, ~158 MB
+    ├── sample_000/             ← .pt files, ~14 MB
     ├── sample_001/
     ├── ...
-    └── sample_053/             ← (indices 46–49 skipped: square images incompatible with processor)
+    └── sample_999/
 ```
 
 ### Dataset Summary
 
-| Metric | Min | Max | Avg |
-|--------|-----|-----|-----|
-| Sequence length | 374 | 537 | 475 |
-| Latent tokens | 6 | 6 | 6.0 |
-| Visual patches | 49 | 196 | 145 |
-| **Total size** | | | **7.9 GB** (~158 MB/sample) |
-
-### Size Breakdown
-
-| Tensor type | Total size | % |
-|-------------|-----------|----|
-| `logits.pt` | 7,206 MB | 91% |
-| `hidden_states.pt` | 511 MB | 6% |
-| `embeddings.pt` | 170 MB | 2% |
-| `latent_to_visual_attn.pt` | 3 MB | <1% |
+| Metric | Value |
+|--------|-------|
+| Samples | 996 |
+| Latent tokens per sample | 6 |
+| **Total size** | **16 GB** (~14 MB/sample) |
 
 ---
 
@@ -226,13 +250,16 @@ source ~/mirage_setup.sh
 
 ## Getting the Data
 
+The data is shared privately via Google Drive — ask the team for the download link.
+
+**From git** (cloned automatically):
+```bash
+git clone <repo-url>
+```
+
+Then download `metadata.json`, `tensors/`, and `vsp_spatial_planning.tar.gz` from Drive and place them in `data/` as shown in the Quick Start section above.
+
 **On Snellius** (readable by all):
 ```bash
 cp -r /home/scur0259/mirage/data/extracted ~/mirage_data/
-```
-
-**From your laptop** (reference files only — no logits due to size):
-```bash
-scp scur0259@snellius.surf.nl:/home/scur0259/mirage/data/extracted/metadata.json .
-scp -r scur0259@snellius.surf.nl:/home/scur0259/mirage/data/extracted/tensors/sample_000/latent_to_visual_attn.pt .
 ```

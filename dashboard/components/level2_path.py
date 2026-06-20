@@ -1,19 +1,28 @@
-from dash import html, dcc
+from dash import html
 import dash_bootstrap_components as dbc
 
 
 def create_level2_path():
     return dbc.Row([
-        dbc.Col([
-            html.Div(id='level2-image-pane', style={
-                'height': '38vh', 'backgroundColor': '#f8f9fa',
-                'border': '1px solid #dee2e6', 'position': 'relative',
-                'backgroundImage': 'linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%, #eee), linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%, #eee)',
-                'backgroundSize': '15px 15px',
-                'backgroundPosition': '0 0, 7.5px 7.5px'
-            })
-        ], width=7),
-        dbc.Col([
-            dcc.Graph(id='level2-flow-pane', style={'height': '38vh'})
-        ], width=5)
-    ], className="g-0")
+        dbc.Col(
+            html.Div(id='level2-ablation-pane', className='h-100'),
+            width=3,
+            className='h-100'
+        ),
+        dbc.Col(
+            html.Div(id='level2-maze-pane', className='h-100'),
+            width=4,
+            className='h-100'
+        ),
+        dbc.Col(
+            html.Div(id='level2-token-grid', className='h-100'),
+            width=5,
+            className='h-100'
+        ),
+    ], className="g-0", style={'height': '65%'})
+
+
+def create_level2_bottom():
+    return dbc.Row([
+        dbc.Col(html.Div(id='level2-output-pane', className='h-100'), width=12, className='h-100')
+    ], className="g-0 mt-1", style={'height': '27%'})
