@@ -2,9 +2,16 @@
 import pytest
 import numpy as np
 import os
-from dashboard.data_loader import RealDataLoader
+from dashboard.data_loader import RealDataLoader, LOADER
 from dashboard.mock_data import MOCK_DATA
 
+NEEDS_DATA = pytest.mark.skipif(
+    not LOADER.get_data(),
+    reason="no real data loaded"
+)
+
+
+@NEEDS_DATA
 def test_data_loader_initialization():
     loader = RealDataLoader()
     assert loader.metadata is not None
@@ -41,6 +48,7 @@ def test_move_direction_parsing():
     assert loader._extract_move_direction("<think></think><output_image>\\boxed{RIGHT, DOWN}") == "RIGHT"
     assert loader._extract_move_direction("No box here") == "UNKNOWN"
 
+@NEEDS_DATA
 def test_integration_path_handling():
     # Verify it can handle both real and fallback data dirs
     loader = RealDataLoader(data_dir='../../mirage_data/extracted')

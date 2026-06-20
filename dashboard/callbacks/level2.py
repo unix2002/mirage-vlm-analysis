@@ -51,15 +51,19 @@ def _read_tar_member(archive_path, member_name):
         return extracted.read()
 
 
-def _kl_fingerprint(sample_id, ablated_ranks):
-    """The sample's combinatorial KL fingerprint: every ablation subset as a
-    cell, grouped into columns by how many tokens it zeroes (k), shaded by KL,
-    with a 6-dot glyph marking which latent tokens it contains. The subset that
-    matches the current ablation selection is outlined in amber.
+def _get_sample_id(clickData):
+    """Extract sample_id from a Level 1 scatter click, or None."""
+    return clickData['points'][0]['hovertext'] if clickData else None
 
-    All values come from the combinatorial KL data (works on train and test);
-    nothing depends on the model's answer changing.
-    """
+
+def _ablated_ranks(state):
+    """Get ablated token ranks from ablation-state store dict."""
+    return (state or {}).get('ablated_ranks', [])
+
+
+def _kl_fingerprint(sample_id, ablated_ranks):
+    """Combinatorial KL fingerprint: one cell per subset, grouped by k, shaded by KL,
+    amber outline on current selection, red border on plan-flipping combos."""
     lat = subset_lattice(sample_id)
     if not lat or not lat['cells']:
         return html.Div('No combinatorial data for this sample',
@@ -181,12 +185,8 @@ def _token_grid(sample):
                     'zIndex': 3, 'display': 'none'
                 })
             ], id={'type': 'token-tile-wrapper', 'index': i}, style={
-                'position': 'relative',
-                'width': '10vh', 'height': '10vh', 'flexShrink': 0,
+                **_TOKEN_TILE_BASE,
                 'border': '1px solid #dee2e6',
-                'overflow': 'hidden',
-                'borderRadius': '4px',
-                'backgroundColor': '#f8f9fa'
             })
         )
 
@@ -206,13 +206,17 @@ def _token_grid(sample):
 
 _DIR_GLYPH = {'UP': '↑', 'DOWN': '↓', 'LEFT': '←', 'RIGHT': '→'}
 
+_TOKEN_TILE_BASE = {
+    'position': 'relative',
+    'width': '10vh', 'height': '10vh', 'flexShrink': 0,
+    'overflow': 'hidden',
+    'borderRadius': '4px',
+    'backgroundColor': '#f8f9fa',
+}
+
 
 def _plan_row(clean_plan, mean_clean_conf, mean_abl_conf, new_plan=None):
-    """Predicted-plan label with direction glyphs in a subtle box.
-
-    If `new_plan` is given and differs (the ablation rerouted the model's free-run
-    plan), show the NEW plan in red and the original struck-through beneath it.
-    """
+    """Predicted-plan label with direction glyphs. If rerouted, shows new plan in red and original struck-through."""
     rerouted = new_plan is not None and list(new_plan) != list(clean_plan)
     plan = list(new_plan) if rerouted else list(clean_plan)
     accent = '#dc3545' if rerouted else '#06b6d4'
@@ -304,12 +308,8 @@ def _mean_top_conf(dists):
 
 
 def _ablated_plan_row(sample_id, ablated_ranks):
-    """Return (clean_plan, mean_clean_conf, mean_abl_conf) for the plan-row header.
-
-    Confidences come from the per-move distributions (single-token via load_moves,
-    combos via load_combo_dist); they default to 1.0 when unavailable, since the
-    stored distributions are argmax-saturated.
-    """
+    """Return (clean_plan, mean_clean_conf, mean_abl_conf) from per-move distributions.
+    Confidences default to 1.0 when distributions are unavailable or argmax-saturated."""
     if len(ablated_ranks) == 1:
         moves = load_moves(sample_id, ablated_ranks[0])
         if moves:
@@ -334,13 +334,14 @@ def _render_output_panel(sample_id, ablated_ranks, show_strip=False):
     return _dose_response_graph(sample_id, ablated_ranks)
 
 
-def update_level2_logic(clickData):
+def update_level2_logic(clickData, data=None):
+    """Return maze view for a sample click; used by callback and test suite."""
     if not clickData:
         return html.Div(className='p-2')
-
-    sample_id = clickData['points'][0]['hovertext']
-    sample = next(s for s in LOADER.get_data() if s['sample_id'] == sample_id)
-
+    if data is None:
+        data = LOADER.get_data()
+    sample_id = _get_sample_id(clickData)
+    sample = next(s for s in data if s['sample_id'] == sample_id)
     return _maze_view(sample)
 
 
@@ -352,13 +353,11 @@ def register_level2_callbacks(app):
         [Input('level1-scatter', 'clickData')]
     )
     def update_level2(clickData):
-        a = update_level2_logic(clickData)
-        if clickData:
-            sample_id = clickData['points'][0]['hovertext']
-            title = f"Level 2: Reasoning Path Analysis — {sample_id}"
-        else:
-            title = "Level 2: Reasoning Path Analysis"
-        return a, {'ablated_ranks': []}, title
+        if not clickData:
+            return html.Div(className='p-2'), {'ablated_ranks': []}, "Level 2: Reasoning Path Analysis"
+        sample_id = _get_sample_id(clickData)
+        sample = next(s for s in LOADER.get_data() if s['sample_id'] == sample_id)
+        return _maze_view(sample), {'ablated_ranks': []}, f"Level 2: Reasoning Path Analysis — {sample_id}"
 
     @app.callback(
         Output('level2-kl-pane', 'children'),
@@ -371,9 +370,8 @@ def register_level2_callbacks(app):
             return html.Div(style={'height': '100%'})
         if not clickData:
             return html.Div(className='p-2')
-        sample_id = clickData['points'][0]['hovertext']
-        ablated = (ablation_state or {}).get('ablated_ranks', [])
-        return html.Div(_kl_fingerprint(sample_id, ablated),
+        sample_id = _get_sample_id(clickData)
+        return html.Div(_kl_fingerprint(sample_id, _ablated_ranks(ablation_state)),
                         style={'flex': 1, 'minWidth': 0, 'overflow': 'auto', 'height': '100%'})
 
     @app.callback(
@@ -391,7 +389,7 @@ def register_level2_callbacks(app):
             })
         if active_tab != 'probing':
             return html.Div()
-        sample_id = clickData['points'][0]['hovertext']
+        sample_id = _get_sample_id(clickData)
         return html.Div([
             dcc.Graph(id='rq2-dynamic-grid',
                       figure=build_rq2_dynamic_grid(sample_id),
@@ -411,8 +409,8 @@ def register_level2_callbacks(app):
     def update_plan_status(clickData, ablation_state):
         if not clickData:
             return html.Div(className='p-1')
-        sample_id = clickData['points'][0]['hovertext']
-        ablated = (ablation_state or {}).get('ablated_ranks', [])
+        sample_id = _get_sample_id(clickData)
+        ablated = _ablated_ranks(ablation_state)
         plan, cc, ac = _ablated_plan_row(sample_id, ablated)
         rr = reroute_plan(sample_id, ablated)
         if rr:
@@ -429,7 +427,7 @@ def register_level2_callbacks(app):
     def update_token_grid(clickData):
         if not clickData:
             return html.Div(className='p-2')
-        sample_id = clickData['points'][0]['hovertext']
+        sample_id = _get_sample_id(clickData)
         sample = next(s for s in LOADER.get_data() if s['sample_id'] == sample_id)
         return _token_grid(sample)
 
@@ -440,7 +438,7 @@ def register_level2_callbacks(app):
         [State({'type': 'token-tile-wrapper', 'index': ALL}, 'id')]
     )
     def update_token_tile_styles(ablation_state, ids):
-        ablated = (ablation_state or {}).get('ablated_ranks', [])
+        ablated = _ablated_ranks(ablation_state)
         wrapper_styles = []
         badge_styles = []
         for wrapper_id in ids:
@@ -449,12 +447,8 @@ def register_level2_callbacks(app):
             border_color = '#dc3545' if is_ablated else '#dee2e6'
             border_width = '3px' if is_ablated else '1px'
             wrapper_styles.append({
-                'position': 'relative',
-                'width': '10vh', 'height': '10vh', 'flexShrink': 0,
+                **_TOKEN_TILE_BASE,
                 'border': f'{border_width} solid {border_color}',
-                'overflow': 'hidden',
-                'borderRadius': '4px',
-                'backgroundColor': '#f8f9fa'
             })
             badge_styles.append({
                 'position': 'absolute', 'top': '2px', 'right': '2px',
@@ -473,9 +467,8 @@ def register_level2_callbacks(app):
     def update_output_pane(clickData, ablation_state, active_tab):
         if not clickData:
             return html.Div()
-        sample_id = clickData['points'][0]['hovertext']
-        ablated = (ablation_state or {}).get('ablated_ranks', [])
-        return _render_output_panel(sample_id, ablated, show_strip=(active_tab == 'ablation'))
+        sample_id = _get_sample_id(clickData)
+        return _render_output_panel(sample_id, _ablated_ranks(ablation_state), show_strip=(active_tab == 'ablation'))
 
     @app.callback(
         Output('ablation-state', 'data', allow_duplicate=True),
@@ -495,7 +488,6 @@ def register_level2_callbacks(app):
         except Exception:
             return no_update
         ranks = [i for i, b in enumerate(mask) if b == '1']
-        current = sorted((ablation_state or {}).get('ablated_ranks', []))
-        # click the already-selected subset to clear it
+        current = sorted(_ablated_ranks(ablation_state))
         new_ranks = [] if ranks == current else ranks
         return {'ablated_ranks': new_ranks}

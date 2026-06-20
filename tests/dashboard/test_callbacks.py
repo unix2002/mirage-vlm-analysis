@@ -15,7 +15,7 @@ def test_update_level2_logic_no_data():
 def test_update_level2_logic_valid_click():
     valid_id = MOCK_DATA[0]['sample_id']
     clickData = {'points': [{'hovertext': valid_id}]}
-    maze_view = update_level2_logic(clickData)
+    maze_view = update_level2_logic(clickData, data=MOCK_DATA)
 
     assert maze_view is not None
     assert isinstance(maze_view, html.Div)
@@ -33,7 +33,7 @@ def test_update_level3_logic_valid_token_click():
     triggered_id = '{"index":"T0","type":"token-heatmap"}.n_clicks'
     n_clicks = [1]
 
-    fig1, fig2, fig3, text, store = update_level3_logic(n_clicks, clickData, triggered_id)
+    fig1, fig2, fig3, text, store = update_level3_logic(n_clicks, clickData, triggered_id, data=MOCK_DATA)
 
     assert f"Details: T0 ({valid_id})" in text
     assert isinstance(fig1, go.Figure)  # Heatmap

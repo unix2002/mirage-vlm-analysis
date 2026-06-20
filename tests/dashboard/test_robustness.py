@@ -10,7 +10,7 @@ def test_callback_robustness_exhaustive():
         clickData = {'points': [{'hovertext': sample_id}]}
 
         # Test Level 2
-        maze_view = update_level2_logic(clickData)
+        maze_view = update_level2_logic(clickData, data=MOCK_DATA)
         assert maze_view is not None
 
         # Test Level 3 for every token in this sample
@@ -18,7 +18,7 @@ def test_callback_robustness_exhaustive():
             token_id = token['token_id']
             triggered_id = f'{{"index":"{token_id}","type":"token-heatmap"}}.n_clicks'
 
-            fig_heatmap, fig_bar, fig_curve, text, store = update_level3_logic([1], clickData, triggered_id)
+            fig_heatmap, fig_bar, fig_curve, text, store = update_level3_logic([1], clickData, triggered_id, data=MOCK_DATA)
 
             assert token_id in text
             assert fig_heatmap.data[0].type == 'heatmap'

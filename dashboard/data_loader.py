@@ -375,7 +375,6 @@ REAL_DATA = LOADER.get_data()
 
 def get_layer_heatmap(sample_id, token_idx, layer):
     """Load attention for (sample, token_idx, layer) → 11×11 spatial focus grid."""
-    import torch
     sid = sample_id if isinstance(sample_id, str) else f"sample_{sample_id:03d}"
     data_dir = getattr(LOADER, 'data_dir', 'data')
     attn_path = os.path.join(data_dir, 'tensors', sid, 'latent_to_visual_attn.pt')

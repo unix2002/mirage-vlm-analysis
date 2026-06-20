@@ -3,11 +3,18 @@ from pathlib import Path
 import numpy as np
 import plotly.graph_objects as go
 
-# Paths — update these to match your environment
+# Paths
 PROBE_RESULTS_PATH = Path("data/processed/rq2/probe_results.json")
 PER_SAMPLE_RESULTS_PATH = Path("data/processed/rq2/probe_results_per_sample.json")
 
 RQ2_GRID_DIRECTIONS = ["LEFT", "DOWN", "RIGHT", "UP"]
+_MAX_GRID_STEPS = 9
+
+
+def _empty_rq2_fig(height=300):
+    return go.Figure().update_layout(
+        title=dict(text="RQ2: Probe data not found", font=dict(size=12)),
+        template="plotly_white", height=height)
 
 def load_rq2_data():
     """Load both static and per-sample probe results. Returns (None, None) on failure."""
@@ -25,9 +32,7 @@ def build_rq2_static_bar(probe_results=None):
     if probe_results is None:
         probe_results, _ = load_rq2_data()
     if probe_results is None:
-        return go.Figure().update_layout(
-            title=dict(text="RQ2: Probe data not found", font=dict(size=12)),
-            template="plotly_white", height=300)
+        return _empty_rq2_fig(height=300)
 
     layers = [int(x) for x in probe_results["layers"]]
     y = [float(probe_results["per_layer"][str(layer)]["all_tokens_concat"]) for layer in layers]
@@ -71,9 +76,7 @@ def build_rq2_dynamic_grid(sample_id, layer=26, per_sample_payload=None):
     if per_sample_payload is None:
         _, per_sample_payload = load_rq2_data()
     if per_sample_payload is None:
-        return go.Figure().update_layout(
-            title=dict(text="RQ2: Probe data not found", font=dict(size=12)),
-            template="plotly_white", height=400)
+        return _empty_rq2_fig(height=400)
 
     samples = per_sample_payload.get("per_sample", {})
     
@@ -91,7 +94,7 @@ def build_rq2_dynamic_grid(sample_id, layer=26, per_sample_payload=None):
     token_map = sample_blob.get("per_layer", {}).get(layer_key, {}).get("token_step_direction_probs", {})
     token_ids = sorted(token_map.keys(), key=lambda x: int(x))
     
-    max_steps = 9 # Per teammate requirement
+    max_steps = _MAX_GRID_STEPS
     means = []
     stds = []
     row_labels = []

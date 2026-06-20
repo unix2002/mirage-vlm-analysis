@@ -9,7 +9,7 @@ def test_rq1_visual_heatmap_data():
     clickData = {'points': [{'hovertext': sample['sample_id']}]}
     triggered_id = '{"index":"T0","type":"token-heatmap"}.n_clicks'
     
-    fig_heatmap, _, _, _, _ = update_level3_logic([1], clickData, triggered_id)
+    fig_heatmap, _, _, _, _ = update_level3_logic([1], clickData, triggered_id, data=MOCK_DATA)
     
     z_data = fig_heatmap.data[0].z
     assert np.max(z_data) <= 1.0
@@ -26,7 +26,7 @@ def test_rq2_visual_bar_logic():
     clickData = {'points': [{'hovertext': sample['sample_id']}]}
     triggered_id = '{"index":"T0","type":"token-heatmap"}.n_clicks'
     
-    _, fig_bar, _, _, _ = update_level3_logic([1], clickData, triggered_id)
+    _, fig_bar, _, _, _ = update_level3_logic([1], clickData, triggered_id, data=MOCK_DATA)
     
     y_vals = fig_bar.data[0].y
     x_vals = fig_bar.data[0].x
@@ -43,7 +43,7 @@ def test_rq3_visual_dependency_curve():
     clickData = {'points': [{'hovertext': sample['sample_id']}]}
     triggered_id = '{"index":"T0","type":"token-heatmap"}.n_clicks'
     
-    _, _, fig_curve, _, _ = update_level3_logic([1], clickData, triggered_id)
+    _, _, fig_curve, _, _ = update_level3_logic([1], clickData, triggered_id, data=MOCK_DATA)
     
     y_vals = fig_curve.data[0].y
     # In mock logic, it's exponentially decaying: kls = [token['kl_divergence'] * np.exp(-0.2 * s) for s in steps]
@@ -54,7 +54,7 @@ def test_level2_ablation_tab():
     sample = MOCK_DATA[0]
     clickData = {'points': [{'hovertext': sample['sample_id']}]}
     
-    maze_view = update_level2_logic(clickData)
+    maze_view = update_level2_logic(clickData, data=MOCK_DATA)
     
     # Maze view is an html.Div containing the maze image.
     assert maze_view is not None
