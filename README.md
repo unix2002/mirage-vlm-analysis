@@ -22,9 +22,7 @@ The dashboard needs the following files in `data/`:
 | File | Size | Source |
 |------|------|--------|
 | `ablation_results.json` | 5 MB | Git |
-| `ablation_v2/subsets.json` | 1 MB | Git |
 | `train_plans_gen.jsonl` | 12 MB | Git |
-| `test_plans_gen.jsonl` | 5 MB | Git |
 | `processed/rq2/probe_results.json` | 1 KB | Git |
 | `processed/rq2/probe_results_per_sample.json` | 18 MB | Git |
 | `metadata.json` | 2.7 MB | External (Drive) |
@@ -36,9 +34,7 @@ The final structure:
 ```
 data/
 ├── ablation_results.json
-├── ablation_v2/subsets.json
 ├── train_plans_gen.jsonl
-├── test_plans_gen.jsonl
 ├── processed/rq2/probe_results.json
 ├── processed/rq2/probe_results_per_sample.json
 ├── metadata.json

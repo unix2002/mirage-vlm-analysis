@@ -1,17 +1,15 @@
 """Free-run reroute data: per sample, per ablation subset, shows whether the
 model's plan changed vs the clean free-run plan.
 
-Files: data/train_plans_gen.jsonl, data/test_plans_gen.jsonl"""
+File: data/train_plans_gen.jsonl"""
 import json
 import logging
 from pathlib import Path
 
 from .callbacks.ablation_v2 import mask_for_ranks
 
-TEST_GEN_PATH = Path('data/test_plans_gen.jsonl')
 TRAIN_GEN_PATH = Path('data/train_plans_gen.jsonl')
 
-_test = None
 _train = None
 
 
@@ -29,18 +27,11 @@ def _load(path):
 
 
 def _entry(sample_id):
-    global _test, _train
-    sid = str(sample_id)
-    if sid.startswith('test_'):
-        if _test is None:
-            _test = _load(TEST_GEN_PATH)
-        cache = _test
-    else:
-        if _train is None:
-            _train = _load(TRAIN_GEN_PATH)
-        cache = _train
+    global _train
+    if _train is None:
+        _train = _load(TRAIN_GEN_PATH)
     try:
-        return cache.get(int(sid.split('_')[-1]))
+        return _train.get(int(str(sample_id).split('_')[-1]))
     except (ValueError, IndexError):
         return None
 
@@ -49,16 +40,14 @@ _flippers = None
 
 
 def flipper_ids():
-    """Namespaced sample ids ('sample_NNN' for train, 'test_NNN' for test) that have
-    at least one ablation subset which reroutes the free-run plan. Cached."""
+    """Sample ids ('sample_NNN') that have at least one plan-flipping ablation subset. Cached."""
     global _flippers
     if _flippers is not None:
         return _flippers
     out = set()
-    for prefix, cache in (('sample_', _load(TRAIN_GEN_PATH)), ('test_', _load(TEST_GEN_PATH))):
-        for sid, e in cache.items():
-            if any(s.get('changed') for s in e.get('subsets', {}).values()):
-                out.add(f'{prefix}{sid:03d}')
+    for sid, e in _load(TRAIN_GEN_PATH).items():
+        if any(s.get('changed') for s in e.get('subsets', {}).values()):
+            out.add(f'sample_{sid:03d}')
     _flippers = out
     return out
 

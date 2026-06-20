@@ -1,14 +1,10 @@
 import json
 from pathlib import Path
 
-ABLATION_V2_DIR = Path('data/ablation_v2')
 RESULTS_PATH = Path('data/ablation_results.json')
-COMBOS_ALL6_PATH = Path('data/ablation_v2/subsets.json')
-ABLATED_PLANS_DIR = ABLATION_V2_DIR / 'ablated_plans'
 ABLATED_PLANS_DIST_PATH = Path('data/train_plans_gen.jsonl')
 
 _results_cache = None
-_combos_all6_cache = None
 _ablated_plans_dist_cache = None
 
 
@@ -48,18 +44,6 @@ def load_per_token_summary(sample_id, token_rank):
     return entry, None
 
 
-def load_combo_file(sample_id):
-    _ensure_combos_cached()
-    if _combos_all6_cache is None:
-        return None
-    combos = _combos_all6_cache.get('per_sample', {}).get('combos', {})
-    sid = _fmt_sample_id(sample_id)
-    return combos.get(sid)
-
-
-_token_pos_cache = {}
-
-
 def load_moves(sample_id, token_rank):
     entry, err = load_per_token_summary(sample_id, token_rank)
     if err or not entry:
@@ -67,77 +51,13 @@ def load_moves(sample_id, token_rank):
     return entry.get('moves')
 
 
-def _get_token_positions(sample_id):
-    """Return dict {token_rank: sequence_position} for a sample."""
-    sid = _fmt_sample_id(sample_id)
-    if sid in _token_pos_cache:
-        return _token_pos_cache[sid]
-
-    results = _load_results()
-    if not results:
-        return None
-
-    per_sample = results.get('per_sample', {})
-    pos_map = {}
-    for rank in range(6):
-        mode = f'zero_token_{rank}'
-        entry = per_sample.get(mode, {}).get(sid)
-        if entry:
-            tp = entry.get('token_pos')
-            if tp is not None:
-                pos_map[rank] = tp
-
-    _token_pos_cache[sid] = pos_map
-    return pos_map
-
-
-def build_bitmask(sample_id, ablated_ranks):
-    """
-    ablated_ranks: list of token ranks to ablate, e.g. [1, 3]  (T1, T3)
-    Returns (mask_string, combo_data) or (None, error_string)
-    """
-    combo = load_combo_file(sample_id)
-    if combo is None:
-        return None, f"Combo data not found for sample {sample_id}"
-    positions = combo['positions']
-    token_pos_map = _get_token_positions(sample_id)
-    if token_pos_map is None:
-        return None, "Per-token position data not available"
-
-    bits = ['0'] * len(positions)
-    for rank in ablated_ranks:
-        pos = token_pos_map.get(rank)
-        if pos is None:
-            return None, f"Token T{rank} position unknown for this sample"
-        try:
-            idx = positions.index(pos)
-        except ValueError:
-            return None, f"Token T{rank} (pos {pos}) not in visible positions {positions}"
-        bits[idx] = '1'
-
-    mask = ''.join(bits)
-    if mask not in combo['subsets']:
-        return None, f"Mask '{mask}' not found in combo subsets"
-    return mask, combo['subsets'][mask]
-
-
 def load_ablated_plans(sample_id):
-    """Return parsed ablated_plans for sample_id, or None.
-    
-    Prefers the non-teacher-forced gen data from the dist file when available;
-    falls back to individual sample JSONs.
-    """
+    """Return parsed ablated_plans for sample_id from the gen dist file, or None."""
     sid = int(_fmt_sample_id(sample_id))
     cache = _load_ablated_plans_dist()
     if cache and sid in cache:
         return cache[sid]
-    
-    # Fallback to file-based lookup
-    str_sid = _fmt_sample_id(sample_id)
-    path = ABLATED_PLANS_DIR / f'sample_{str_sid.zfill(3) if str_sid.isdigit() else str_sid}.json'
-    if not path.exists():
-        return None
-    return json.loads(path.read_text())
+    return None
 
 
 def load_clean_plan(sample_id):
@@ -148,12 +68,6 @@ def load_clean_plan(sample_id):
     return (plans.get('clean_plan_gen')
             or plans.get('clean_plan_tf')
             or plans.get('clean_plan'))
-
-
-def _ensure_combos_cached():
-    global _combos_all6_cache
-    if _combos_all6_cache is None and COMBOS_ALL6_PATH.exists():
-        _combos_all6_cache = json.loads(COMBOS_ALL6_PATH.read_text())
 
 
 def _load_ablated_plans_dist():
@@ -256,15 +170,6 @@ def sample_dose_response(sample_id):
         if s.get('changed'):
             b['plan_flips'] += 1
 
-    em_by_k = {}
-    combo = load_combo_file(sample_id)
-    if combo:
-        for mask, s in combo.get('subsets', {}).items():
-            c = em_by_k.setdefault(mask.count('1'), [0, 0])
-            c[1] += 1
-            if not s.get('em_abl', True):
-                c[0] += 1
-
     rows = []
     for k in sorted(by_k):
         kl = sorted(by_k[k]['kl'])
@@ -277,13 +182,12 @@ def sample_dose_response(sample_id):
             'kl_lo': kl[0],
             'kl_hi': kl[-1],
             'plan_flip_pct': 100.0 * by_k[k]['plan_flips'] / len(kl),
-            'em_flip_pct': (100.0 * em[0] / em[1]) if em and em[1] else None,
         })
     return {'rows': rows, 'token_labels': plans.get('token_labels'), 'n': n}
 
 
 def current_combo_metrics(sample_id, ablated_ranks):
-    """KL and both flip flags for the exact selected combo, or None."""
+    """KL and plan-flip flag for the exact selected combo, or None."""
     if not ablated_ranks:
         return None
     plans = load_ablated_plans(sample_id)
@@ -293,47 +197,11 @@ def current_combo_metrics(sample_id, ablated_ranks):
     s = plans['subsets'].get(mask_for_ranks(ablated_ranks, n))
     if s is None:
         return None
-    res = {
+    return {
         'k': len(ablated_ranks),
         'kl': s.get('kl_mean', 0.0),
         'plan_flipped': bool(s.get('changed')),
-        'em_flipped': None,
     }
-    _, combo = build_bitmask(sample_id, ablated_ranks)
-    if isinstance(combo, dict):
-        res['em_flipped'] = not combo.get('em_abl', True)
-    return res
-
-
-def ablation_status(ranks):
-    """Human-readable summary of the current ablated set."""
-    ranks = sorted(ranks or [])
-    if not ranks:
-        return "no tokens ablated"
-    return "ablated: " + " + ".join(f"T{r}" for r in ranks)
-
-
-def toggle_rank(sample_id, current_ranks, rank):
-    """Toggle a token rank in/out of the ablated set.
-
-    Additions are validated against the combinatorial study (only tokens whose
-    position is in combos_all6 can be combined). Returns (new_ranks, status).
-    """
-    ranks = list(current_ranks or [])
-    if rank in ranks:
-        ranks.remove(rank)
-        return sorted(ranks), ablation_status(ranks)
-
-    combo = load_combo_file(sample_id)
-    if combo is None:
-        return sorted(ranks), "no combinatorial data for this sample"
-    token_pos_map = _get_token_positions(sample_id)
-    pos = token_pos_map.get(rank) if token_pos_map else None
-    if pos is None or pos not in combo['positions']:
-        return sorted(ranks), f"T{rank} is not in the combinatorial study"
-
-    ranks.append(rank)
-    return sorted(ranks), ablation_status(ranks)
 
 
 def subset_lattice(sample_id):

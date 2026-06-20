@@ -12,7 +12,7 @@ from ..gen_data import reroute_plan
 from .ablation_v2 import (
     load_moves, load_combo_dist, load_clean_plan,
     sample_dose_response, current_combo_metrics, mask_for_ranks,
-    toggle_rank, subset_lattice,
+    subset_lattice,
 )
 from ..rq2_viz import build_rq2_static_bar, build_rq2_dynamic_grid
 
@@ -268,10 +268,6 @@ def _dose_response_graph(sample_id, ablated_ranks):
                              line=dict(color='#06b6d4', width=2), marker=dict(size=5),
                              hovertemplate='zero %{x} tokens<br>median KL %{y:.4f}<extra></extra>',
                              name='median KL', showlegend=True))
-    fig.add_trace(go.Scatter(x=ks, y=[r['em_flip_pct'] for r in rows], mode='lines', yaxis='y2',
-                             line=dict(color='#dc3545', width=1.5, dash='dash'),
-                             hovertemplate='text flip %{y:.0f}%<extra></extra>',
-                             showlegend=False))
     fig.add_trace(go.Scatter(x=ks, y=[r['plan_flip_pct'] for r in rows], mode='lines', yaxis='y2',
                              line=dict(color='#94a3b8', width=1.5, dash='dot'),
                              hovertemplate='plan flip %{y:.0f}%<extra></extra>',

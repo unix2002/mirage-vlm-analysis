@@ -112,7 +112,6 @@ class RealDataLoader:
             '../mirage_data/extracted',      # From remco/
             '../../mirage_data/extracted',   # From remco/mirage-vlm-analysis/
             '/gpfs/home1/scur0241/mirage_data/extracted', # Absolute path fallback
-            'data/reference'                 # Local fallback
         ]
 
         for d in possible_dirs:
