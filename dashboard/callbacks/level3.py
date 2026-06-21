@@ -143,6 +143,7 @@ def register_level3_callbacks(app):
             return (dash.no_update,) * 7
 
         triggered_id_full = ctx.triggered[0]['prop_id']
+        logging.info("level3 trigger prop_id: %s", triggered_id_full[:120])
         active_click = _extract_active_click(token_clicks)
         if not active_click:
             return (dash.no_update,) * 7
@@ -151,8 +152,9 @@ def register_level3_callbacks(app):
         if 'token-heatmap' in triggered_id_full:
             try:
                 token_index = json.loads(triggered_id_full.split('.')[0])['index']
-            except Exception:
-                token_index = None
+            except Exception as e:
+                logging.info("level3 token_index parse failed: %s", e)
+        logging.info("level3 token_index=%s", token_index)
 
         if token_index is None:
             return (dash.no_update,) * 7
