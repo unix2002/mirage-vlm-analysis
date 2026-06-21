@@ -26,4 +26,4 @@ def create_level3_detail():
                 tooltip=dict(placement='bottom'),
             ), style={'width': '33.33%', 'marginTop': '0.25rem', 'flexShrink': 0}),
         ], id='level3-content', style=_HIDDEN),
-    ])
+    ], style={'position': 'relative', 'height': '100%'})

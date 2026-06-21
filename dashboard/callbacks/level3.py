@@ -1,6 +1,5 @@
 from dash.dependencies import Input, Output, State, ALL
 import dash
-import logging
 import plotly.express as px
 import plotly.graph_objects as go
 import json
@@ -18,7 +17,7 @@ except Exception:
     _PROBE_CACHE = None
 
 _HIDDEN = {'display': 'none'}
-_VISIBLE = {'display': 'flex', 'flexDirection': 'column', 'overflow': 'hidden', 'height': '100%'}
+_VISIBLE = {'position': 'absolute', 'inset': 0, 'display': 'flex', 'flexDirection': 'column'}
 
 
 def _extract_active_click(token_clicks):
@@ -137,13 +136,10 @@ def register_level3_callbacks(app):
     )
     def update_level3_detail(token_clicks, clickData):
         ctx = dash.callback_context
-        logging.info("level3 callback: triggered=%s clicks=%s",
-                     bool(ctx.triggered), [bool(c) for c in token_clicks])
         if not ctx.triggered:
             return (dash.no_update,) * 7
 
         triggered_id_full = ctx.triggered[0]['prop_id']
-        logging.info("level3 trigger prop_id: %s", triggered_id_full[:120])
         active_click = _extract_active_click(token_clicks)
         if not active_click:
             return (dash.no_update,) * 7
@@ -152,9 +148,8 @@ def register_level3_callbacks(app):
         if 'token-heatmap' in triggered_id_full:
             try:
                 token_index = json.loads(triggered_id_full.split('.')[0])['index']
-            except Exception as e:
-                logging.info("level3 token_index parse failed: %s", e)
-        logging.info("level3 token_index=%s", token_index)
+            except Exception:
+                token_index = None
 
         if token_index is None:
             return (dash.no_update,) * 7
