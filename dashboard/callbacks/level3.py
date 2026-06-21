@@ -4,15 +4,20 @@ import plotly.express as px
 import plotly.graph_objects as go
 import json
 import numpy as np
+from pathlib import Path
 from ..data_loader import get_layer_heatmap, LOADER
 from .ablation_v2 import token_marginal_contributions
 
+_PROBE_PATH = Path("data/processed/rq2/probe_results_per_sample.json")
+
+try:
+    with open(_PROBE_PATH) as f:
+        _PROBE_CACHE = json.load(f)
+except Exception:
+    _PROBE_CACHE = None
 
 _HIDDEN = {'display': 'none'}
 _VISIBLE = {'display': 'flex', 'flexDirection': 'column', 'overflow': 'hidden', 'height': '100%'}
-
-
-_OFF_VALUE_RATIO = 0.35
 
 
 def _extract_active_click(token_clicks):
@@ -60,14 +65,29 @@ def update_level3_logic(token_clicks, clickData, triggered_id_full, data=None):
     fig_heatmap = px.imshow(grid, color_continuous_scale='Viridis')
     _apply_heatmap_layout(fig_heatmap, f"RQ1: Spatial Focus Heatmap (Token {token_id})")
 
-    dirs = ['UP', 'DOWN', 'LEFT', 'RIGHT']
-    base = max(0.0, min(1.0, float(token['probe_accuracy'])))
-    off_value = max(0.0, min(1.0, base * _OFF_VALUE_RATIO))
-    accs = [base if d == sample['move_direction'] else off_value for d in dirs]
-    fig_bar = px.bar(x=dirs, y=accs, labels={'x': 'Direction', 'y': 'Probe Accuracy'})
-    _style_detail_fig(fig_bar, f"RQ2: Directional Probe Accuracy (Token {token_id})")
+    # RQ2: direction probe probabilities from real probe data
+    fig_bar = go.Figure()
+    if _PROBE_CACHE:
+        per_sample = _PROBE_CACHE.get("per_sample", {})
+        sample_key = sample_id.replace("sample_", "").lstrip("0") or "0"
+        probe_sample = per_sample.get(sample_key)
+        if probe_sample:
+            layers = sorted(int(k) for k in probe_sample.get("per_layer", {}).keys())
+            best_layer = str(layers[-1]) if layers else "26"
+            tdata = probe_sample["per_layer"].get(best_layer, {}).get(
+                "token_step_direction_probs", {}).get(str(token_rank), {})
+            if tdata:
+                step = sorted(tdata.keys(), key=int)[0]
+                probs = tdata[step]
+                dirs = list(probs.keys())
+                values = [probs[d] for d in dirs]
+                true_dir = probe_sample.get("true_move_sequence", [None])[0]
+                colors = ['#06b6d4' if d == true_dir else '#94a3b8' for d in dirs]
+                fig_bar = go.Figure()
+                fig_bar.add_trace(go.Bar(x=dirs, y=values, marker_color=colors, showlegend=False))
+    _style_detail_fig(fig_bar, f"RQ2: Direction Probe (Token {token_id})")
     fig_bar.update_layout(
-        yaxis=dict(range=[0, 1], tickfont=dict(size=8)),
+        yaxis=dict(type='log', tickfont=dict(size=8)),
         xaxis=dict(tickfont=dict(size=8))
     )
 
