@@ -1,5 +1,6 @@
 from dash.dependencies import Input, Output, State, ALL
 import dash
+import logging
 import plotly.express as px
 import plotly.graph_objects as go
 import json
@@ -136,6 +137,8 @@ def register_level3_callbacks(app):
     )
     def update_level3_detail(token_clicks, clickData):
         ctx = dash.callback_context
+        logging.info("level3 callback: triggered=%s clicks=%s",
+                     bool(ctx.triggered), [bool(c) for c in token_clicks])
         if not ctx.triggered:
             return (dash.no_update,) * 7
 
