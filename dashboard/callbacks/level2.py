@@ -7,6 +7,7 @@ from functools import lru_cache
 from dash.dependencies import Input, Output, State, ALL
 from dash import dcc, html, callback_context, no_update
 import plotly.graph_objects as go
+from mirage_vlm.utils.grid_gen import maze_renderer
 from ..data_loader import LOADER
 from ..gen_data import reroute_plan
 from .ablation_v2 import (
@@ -127,10 +128,27 @@ def _kl_fingerprint(sample_id, ablated_ranks):
     ], style={'height': '100%'})
 
 
-def _maze_view(sample):
-    image_src = _load_maze_image(sample.get('metadata', {}).get('image_input'))
+def _maze_view(sample, ablated_ranks=None):
+    sample_id = sample.get('sample_id')
+    map_desc = sample.get('map_desc')
+    base_plan = load_clean_plan(sample_id) or []
+    ablated_path = None
+
+    if ablated_ranks is not None:
+        rr = reroute_plan(sample_id, ablated_ranks)
+        if rr:
+            _, ablated_path = rr
+
+    # Prefer the generated grid image when map data is available.
+    if map_desc:
+        image_src = maze_renderer(map_desc, base_plan, ablated_path=ablated_path)
+    else:
+        print(f"Warning: No map_desc for sample {sample_id}, falling back to image_input.")
+        image_src = _load_maze_image(sample.get('metadata', {}).get('image_input'))
+
     if not image_src:
         return html.Div('Maze image unavailable.', className='small text-muted p-2')
+
     return html.Div([
         html.Img(src=image_src, style={
             'maxWidth': '100%',
@@ -146,7 +164,8 @@ def _maze_view(sample):
 
 def _token_grid(sample):
     tiles = []
-    image_src = _load_maze_image(sample.get('metadata', {}).get('image_input'))
+    metadata = sample.get('metadata', {})
+    image_src = _load_maze_image(metadata.get('image_input'))
     for i, token in enumerate(sample['tokens'][:6]):
         heatmap = go.Figure(data=go.Heatmap(
             z=token['spatial_focus'],
@@ -351,14 +370,15 @@ def register_level2_callbacks(app):
         [Output('level2-maze-pane', 'children'),
          Output('ablation-state', 'data'),
          Output('level2-header-title', 'children')],
-        [Input('level1-scatter', 'clickData')]
+        [Input('level1-scatter', 'clickData'),
+         Input('ablation-state', 'data')]
     )
-    def update_level2(clickData):
+    def update_level2(clickData, ablation_state):
         if not clickData:
             return html.Div(className='p-2'), {'ablated_ranks': []}, "Level 2: Reasoning Path Analysis"
         sample_id = _get_sample_id(clickData)
         sample = next(s for s in LOADER.get_data() if s['sample_id'] == sample_id)
-        return _maze_view(sample), {'ablated_ranks': []}, f"Level 2: Reasoning Path Analysis — {sample_id}"
+        return _maze_view(sample, _ablated_ranks(ablation_state)), {'ablated_ranks': _ablated_ranks(ablation_state)}, f"Level 2: Reasoning Path Analysis — {sample_id}"
 
     @app.callback(
         Output('level2-kl-pane', 'children'),

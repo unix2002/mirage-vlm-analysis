@@ -7,12 +7,13 @@ def create_level2_top():
     return dbc.Row([
         dbc.Col(
             html.Div([
-                html.Div(id='level2-plan-status-row', style={'flexShrink': 0}),
+                # removed because of reduncancy with the maze pane below and to save vertical space
+                # html.Div(id='level2-plan-status-row', style={'flexShrink': 0}),
                 html.Div(id='level2-maze-pane',
                          style={'flex': 1, 'minHeight': 0, 'overflow': 'hidden'}),
             ], style={'display': 'flex', 'flexDirection': 'column', 'height': '100%'}),
             width=3, className='h-100',
-            style={'paddingRight': '8px'},
+            style={'paddingRight': '8px', 'paddingTop': '10px'},
         ),
         dbc.Col(
             html.Div(id='level2-token-grid', className='h-100',
