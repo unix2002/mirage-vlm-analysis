@@ -162,10 +162,25 @@ def _maze_view(sample, ablated_ranks=None):
               'overflow': 'hidden'})
 
 
-def _token_grid(sample):
-    tiles = []
+def _token_grid(sample, ablated_ranks=None):
+    sample_id = sample.get('sample_id')
+    map_desc = sample.get('map_desc')
+    base_plan = load_clean_plan(sample_id) or []
+    chosen_path = base_plan
+    ablated_path = None
+
+    if ablated_ranks is not None:
+        rr = reroute_plan(sample_id, ablated_ranks)
+        if rr:
+            _, ablated_path = rr
+
     metadata = sample.get('metadata', {})
-    image_src = _load_maze_image(metadata.get('image_input'))
+    if map_desc:
+        image_src = maze_renderer(map_desc, chosen_path, ablated_path=ablated_path)
+    else:
+        image_src = _load_maze_image(metadata.get('image_input'))
+
+    tiles = []
     for i, token in enumerate(sample['tokens'][:6]):
         heatmap = go.Figure(data=go.Heatmap(
             z=token['spatial_focus'],
@@ -375,10 +390,10 @@ def register_level2_callbacks(app):
     )
     def update_level2(clickData, ablation_state):
         if not clickData:
-            return html.Div(className='p-2'), {'ablated_ranks': []}, "Level 2: Reasoning Path Analysis"
+            return html.Div(className='p-2'), {'ablated_ranks': []}, "Step 2: Reasoning Path Analysis"
         sample_id = _get_sample_id(clickData)
         sample = next(s for s in LOADER.get_data() if s['sample_id'] == sample_id)
-        return _maze_view(sample, _ablated_ranks(ablation_state)), {'ablated_ranks': _ablated_ranks(ablation_state)}, f"Level 2: Reasoning Path Analysis — {sample_id}"
+        return _maze_view(sample, _ablated_ranks(ablation_state)), {'ablated_ranks': _ablated_ranks(ablation_state)}, f"Step 2: Reasoning Path Analysis — {sample_id}"
 
     @app.callback(
         Output('level2-kl-pane', 'children'),
@@ -402,7 +417,7 @@ def register_level2_callbacks(app):
     )
     def update_probing_pane(clickData, active_tab):
         if not clickData:
-            return html.Div("Select a Sample (Level 1)", style={
+            return html.Div("Select a Sample (Step 1)", style={
                 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center',
                 'height': '100%', 'color': '#888', 'fontSize': '0.65rem',
                 'textTransform': 'uppercase', 'letterSpacing': '0.05em',
@@ -443,14 +458,15 @@ def register_level2_callbacks(app):
 
     @app.callback(
         Output('level2-token-grid', 'children'),
-        [Input('level1-scatter', 'clickData')]
+        [Input('level1-scatter', 'clickData'),
+         Input('ablation-state', 'data')]
     )
-    def update_token_grid(clickData):
+    def update_token_grid(clickData, ablation_state):
         if not clickData:
             return html.Div(className='p-2')
         sample_id = _get_sample_id(clickData)
         sample = next(s for s in LOADER.get_data() if s['sample_id'] == sample_id)
-        return _token_grid(sample)
+        return _token_grid(sample, _ablated_ranks(ablation_state))
 
     @app.callback(
         Output({'type': 'token-tile-wrapper', 'index': ALL}, 'style'),

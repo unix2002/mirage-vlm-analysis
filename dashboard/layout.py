@@ -19,7 +19,7 @@ _HEADER_CLASS = "py-1 small font-weight-bold"
 def create_sidebar():
     return html.Div([
         dbc.Card([
-            dbc.CardHeader("Level 1: Sample Landscape", className=_HEADER_CLASS),
+            dbc.CardHeader("Step 1: Sample Selection", className=_HEADER_CLASS),
             dbc.CardBody([
                 dcc.Graph(
                     id='level1-scatter', 
@@ -87,7 +87,7 @@ def create_main_content():
         dbc.Card([
             dbc.CardHeader(
                 html.Div([
-                    html.Span("Level 2: Reasoning Path Analysis", id='level2-header-title', className="align-self-center small font-weight-bold"),
+                    html.Span("Step 2: Reasoning Path Analysis", id='level2-header-title', className="align-self-center small font-weight-bold"),
                     dbc.RadioItems(
                         id='level2-tab-selector',
                         options=[
@@ -112,7 +112,7 @@ def create_main_content():
 
         # Level 3: Token Specifics
         dbc.Card([
-            dbc.CardHeader(html.Div(id='level3-instructions', children="Level 3: Token Details"),
+            dbc.CardHeader(html.Div(id='level3-instructions', children="Step 3: Token Details"),
                            className=_HEADER_CLASS),
             dbc.CardBody(create_level3_detail(), className="p-1")
         ], style={'height': '31vh'})

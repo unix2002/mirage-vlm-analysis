@@ -21,7 +21,6 @@ _DIRECTION_COLORS = {
 
 _HOVER_TEMPLATE = (
     "<b>%{text}</b><br>"
-    "Predicted: %{customdata[0]}<br>"
     "Correct: %{customdata[1]}<br>"
     "Avg KL Div: %{customdata[2]:.2f}<br>"
     "Seq Len: %{customdata[3]}<br>"
@@ -356,7 +355,7 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
         paper_bgcolor='white',
         font=dict(family="Arial, sans-serif", size=12, color="#333"),
         title=dict(
-            text="Fig 1. Latent Reasoning Landscape",
+            text="UMAP Latent Reasoning Landscape",
             x=0.05,
             y=0.98,
             font=dict(size=15, color="#111")

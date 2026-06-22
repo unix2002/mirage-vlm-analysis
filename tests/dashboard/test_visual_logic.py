@@ -1,5 +1,6 @@
 import pytest
 from dashboard.callbacks import update_level3_logic, update_level2_logic
+from dashboard.callbacks.level2 import _token_grid
 from dashboard.mock_data import MOCK_DATA
 import numpy as np
 
@@ -53,8 +54,18 @@ def test_level2_ablation_tab():
     """Verify Level 2 now returns a maze_view element."""
     sample = MOCK_DATA[0]
     clickData = {'points': [{'hovertext': sample['sample_id']}]}
-    
+
     maze_view = update_level2_logic(clickData, data=MOCK_DATA)
-    
+
     # Maze view is an html.Div containing the maze image.
     assert maze_view is not None
+
+
+def test_token_grid_uses_generated_maze_background_when_available():
+    """Token tiles should prefer rendered maze views over raw image inputs."""
+    sample = MOCK_DATA[0]
+    grid = _token_grid(sample)
+
+    assert grid is not None
+    tile_children = grid.children[1].children
+    assert len(tile_children) == len(sample['tokens'][:6])

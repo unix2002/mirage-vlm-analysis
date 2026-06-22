@@ -47,7 +47,7 @@ def _apply_heatmap_layout(fig, title):
 def update_level3_logic(token_clicks, clickData, triggered_id_full, data=None):
     active_click = _extract_active_click(token_clicks)
     if not active_click or not clickData:
-        return go.Figure(), go.Figure(), go.Figure(), "Level 3: Token Details", {}
+        return go.Figure(), go.Figure(), go.Figure(), "Step 3: Token Details", {}
 
     if '.' in triggered_id_full:
         triggered_id_full = triggered_id_full.split('.')[0]

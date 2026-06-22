@@ -8,7 +8,7 @@ def create_level3_detail():
     return html.Div([
         dcc.Store(id='current-token-state', data={}),
         dcc.Store(id='ablation-state', data={'ablated_ranks': []}),
-        html.Div("select a level 2 latent token", id='level3-placeholder',
+        html.Div("select a latent token (step 2)", id='level3-placeholder',
                  className="text-muted small d-flex justify-content-center align-items-center h-100"),
         html.Div([
             html.Div([

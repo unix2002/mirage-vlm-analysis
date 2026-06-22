@@ -330,6 +330,7 @@ class RealDataLoader:
                     'num_latent': num_latent,
                     'umap_x': 0.0,
                     'umap_y': 0.0,
+                    'umap_uncertainty': 0.0,
                     'tokens': tokens,
                     'attention_weights': token_matrix.tolist(),
                     'metadata': meta,
@@ -358,12 +359,27 @@ class RealDataLoader:
             reducer = umap.UMAP(n_neighbors=5, min_dist=0.3, metric='cosine',
                                 n_components=2, random_state=42)
             coords = reducer.fit_transform(self.X_pca)
+
+            # Initial projection uncertainty calculation matches recompute_umap().
+            dist_high = 1.0 - cosine_similarity(self.X_pca)
+            max_high = np.max(dist_high)
+            if max_high > 0:
+                dist_high /= max_high
+
+            dist_2d = euclidean_distances(coords)
+            max_2d = np.max(dist_2d)
+            if max_2d > 0:
+                dist_2d /= max_2d
+
+            uncertainty = np.mean(np.abs(dist_high - dist_2d), axis=1)
+
             for idx, coord_idx in enumerate(self.valid_indices):
                 if coord_idx >= len(processed):
                     continue
                 target = processed[coord_idx]
                 target['umap_x'] = float(coords[idx, 0])
                 target['umap_y'] = float(coords[idx, 1])
+                target['umap_uncertainty'] = float(uncertainty[idx])
             logging.info("Default UMAP projection ready (PCA input).")
 
         if self.X_pca is not None:
