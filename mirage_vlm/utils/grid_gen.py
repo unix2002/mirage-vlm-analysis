@@ -26,7 +26,7 @@ def analyze_tile(tile):
     else:
         return "ice"
 
-def add_path(draw, path, start_pos, scale, color="blue"):
+def add_path(draw, path, start_pos, scale, width=10, color="blue"):
     """Draws a path on the maze image using a chosen color."""
     move_map = {
         'UP': (-1, 0), 'DOWN': (1, 0),
@@ -55,11 +55,63 @@ def add_path(draw, path, start_pos, scale, color="blue"):
                 for r, c in coords
             ],
             fill=color,
-            width=5,
+            width=width,
             joint="curve"
         )
 
     return coords[-1]
+
+def draw_paths(draw, orig_path=None, ablated_path=None, player_pos=None, scale=50):
+    """Draws both original and ablated paths on the maze image."""
+
+    if not player_pos:
+        print("Player position not found in the map description.")
+        return None
+
+    # Draw start position of the player
+    r, c = player_pos
+    new_left, new_top = c * scale + 0.375 * scale, r * scale + 0.375 * scale
+    draw.rectangle(
+        [new_left, new_top, new_left + scale * 0.25, new_top + scale * 0.25],
+        fill="black"
+    )
+
+    orig_end = None
+    ablated_end = None
+
+    if ablated_path:
+        ablated_end = add_path(
+            draw, ablated_path, player_pos, scale,
+            width=10, color="red"
+        )
+
+    if orig_path:
+        orig_end = add_path(
+            draw, orig_path, player_pos, scale,
+            width=5 if ablated_path else 10, color="blue"
+        )
+
+    if ablated_end:
+        r, c = ablated_end
+        red_box_size = scale * 0.6
+        new_left = c * scale + (scale - red_box_size) / 2
+        new_top = r * scale + (scale - red_box_size) / 2
+        draw.rectangle(
+            [new_left, new_top, new_left + red_box_size, new_top + red_box_size],
+            fill="red"
+        )
+
+    if orig_end:
+        r, c = orig_end
+        blue_box_size = scale * 0.5
+        new_left = c * scale + (scale - blue_box_size) / 2
+        new_top = r * scale + (scale - blue_box_size) / 2
+        draw.rectangle(
+            [new_left, new_top, new_left + blue_box_size, new_top + blue_box_size],
+            fill="blue"
+        )
+
+    return orig_end
 
 def maze_renderer(map_desc, orig_path, ablated_path=None, scale=50):
     """Processes all steps within a specific map instance folder."""
@@ -83,7 +135,7 @@ def maze_renderer(map_desc, orig_path, ablated_path=None, scale=50):
 
             # Check if this tile is the predetermined goal
             if tile_type == "goal":
-                fill_color = "green"
+                fill_color = "lightgreen"
             elif tile_type == "player":
                 fill_color = "white"
                 player_pos = (r, c)
@@ -94,19 +146,26 @@ def maze_renderer(map_desc, orig_path, ablated_path=None, scale=50):
 
             # Draw grid tile
             new_left, new_top = c * scale, r * scale
-            if fill_color == "green":
-                outline_color = "lightgreen"
-            else:
-                outline_color = "gray"
             draw.rectangle(
                 [new_left, new_top, new_left + scale, new_top + scale],
                 fill=fill_color, outline="gray"
             )
 
-    # Draw paths
-    orig_end = add_path(draw, orig_path, player_pos, scale, color="blue")
+    # Draw paths in the requested order: ablated first (bottom), original second.
+    orig_end = None
+    ablated_end = None
+
     if ablated_path:
-        add_path(draw, ablated_path, player_pos, scale, color="red")
+        ablated_end = add_path(
+            draw, ablated_path, player_pos, scale,
+            width=10, color="red"
+        )
+
+    if orig_path:
+        orig_end = add_path(
+            draw, orig_path, player_pos, scale,
+            width=5 if ablated_path else 10, color="blue"
+        )
 
     # Draw start position of the player
     r, c = player_pos
@@ -116,13 +175,26 @@ def maze_renderer(map_desc, orig_path, ablated_path=None, scale=50):
         fill="black"
     )
 
-    # Draw current position of the player
-    r, c = orig_end
-    new_left, new_top = c * scale + 0.25 * scale, r * scale + 0.25 * scale
-    draw.rectangle(
-        [new_left, new_top, new_left + scale * 0.5, new_top + scale * 0.5],
-        fill="blue"
-    )
+    # Draw final player position boxes.
+    if ablated_end:
+        r, c = ablated_end
+        red_box_size = scale * 0.6
+        new_left = c * scale + (scale - red_box_size) / 2
+        new_top = r * scale + (scale - red_box_size) / 2
+        draw.rectangle(
+            [new_left, new_top, new_left + red_box_size, new_top + red_box_size],
+            fill="red"
+        )
+
+    if orig_end:
+        r, c = orig_end
+        blue_box_size = scale * 0.5
+        new_left = c * scale + (scale - blue_box_size) / 2
+        new_top = r * scale + (scale - blue_box_size) / 2
+        draw.rectangle(
+            [new_left, new_top, new_left + blue_box_size, new_top + blue_box_size],
+            fill="blue"
+        )
 
     # Draw the outer canvas frame boundary
     draw.rectangle([0, 0, canvas_dim - 1, canvas_dim - 1], outline="gray")
