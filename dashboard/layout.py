@@ -19,7 +19,13 @@ _HEADER_CLASS = "py-1 small font-weight-bold"
 def create_sidebar():
     return html.Div([
         dbc.Card([
-            dbc.CardHeader("Step 1: Sample Selection & UMAP Tuner", className=_HEADER_CLASS),
+            dbc.CardHeader(
+                html.Div([
+                    html.Span("Step 1: Sample Selection & UMAP Tuner", className="align-self-center"),
+                    dbc.Button("HELP", id="help-btn-step1", size="sm", color="info", outline=True, className="ms-auto py-0 px-2", style={'fontSize': '0.75rem'})
+                ], style={'display': 'flex', 'justifyContent': 'space-between', 'alignItems': 'center'}),
+                className=_HEADER_CLASS
+            ),
             dbc.CardBody([
                 dcc.Graph(
                     id='level1-scatter', 
@@ -95,6 +101,7 @@ def create_main_content():
                         inputClassName='btn-check',
                         labelClassName='btn btn-outline-secondary btn-sm px-2 py-0',
                     ),
+                    dbc.Button("HELP", id="help-btn-step2", size="sm", color="info", outline=True, className="ms-2 py-0 px-2", style={'fontSize': '0.75rem'})
                 ], style={'display': 'flex', 'justifyContent': 'space-between', 'alignItems': 'center'}),
                 className="py-1"
             ),
@@ -107,11 +114,35 @@ def create_main_content():
 
         # Level 3: Token Specifics
         dbc.Card([
-            dbc.CardHeader(html.Div(id='level3-instructions', children="Step 3: Token Details"),
-                           className=_HEADER_CLASS),
+            dbc.CardHeader(
+                html.Div([
+                    html.Span("Step 3: Token Details", id='level3-instructions', className="align-self-center"),
+                    dbc.Button("HELP", id="help-btn-step3", size="sm", color="info", outline=True, className="ms-auto py-0 px-2", style={'fontSize': '0.75rem'})
+                ], style={'display': 'flex', 'justifyContent': 'space-between', 'alignItems': 'center'}),
+                className=_HEADER_CLASS
+            ),
             dbc.CardBody(create_level3_detail(), className="p-1", style={'display': 'flex', 'flexDirection': 'column', 'flex': 1, 'minHeight': 0})
         ], style={'flex': 1, 'minHeight': 0, 'display': 'flex', 'flexDirection': 'column'})
     ], style={'height': '100%', 'display': 'flex', 'flexDirection': 'column'})
+
+
+def create_help_modals():
+    return html.Div([
+        dbc.Modal([
+            dbc.ModalHeader(dbc.ModalTitle("Help: Sample Selection & UMAP Tuner")),
+            dbc.ModalBody("Use the scatter plot to select samples for detailed analysis. The UMAP projection clusters samples based on their latent reasoning representations. You can tune the UMAP parameters and use the color metric dropdown to highlight different aspects of the data."),
+        ], id="help-modal-step1", is_open=False, size="lg", centered=True),
+        
+        dbc.Modal([
+            dbc.ModalHeader(dbc.ModalTitle("Help: Reasoning Path Analysis")),
+            dbc.ModalBody("This section lets you inspect the internal reasoning path. Use 'Probing' to see which maze cells the model focuses on at each step. Use 'Ablation' to see what happens when specific reasoning paths are altered. Click on a sample in Step 1 to load it here."),
+        ], id="help-modal-step2", is_open=False, size="lg", centered=True),
+
+        dbc.Modal([
+            dbc.ModalHeader(dbc.ModalTitle("Help: Token Details")),
+            dbc.ModalBody("Here you can inspect the specifics of an individual reasoning token. This includes attention maps over the visual input, and other token-level metrics that help explain why the model made a specific move. Click on a token in Step 2 to view details."),
+        ], id="help-modal-step3", is_open=False, size="lg", centered=True),
+    ])
 
 
 def create_layout():
@@ -128,5 +159,6 @@ def create_layout():
                 # Right Column: Analysis (75% width)
                 dbc.Col(create_main_content(), width=9, className="pl-1 py-2")
             ], style={'height': '95vh'})
-        ], style={'height': '100vh', 'overflow': 'hidden'})
+        ], style={'height': '100vh', 'overflow': 'hidden'}),
+        create_help_modals()
     ], fluid=True, className="p-0")
