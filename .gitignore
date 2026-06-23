@@ -47,3 +47,4 @@ Thumbs.db
 run_extract_scratch.sh
 run_ablate_1000.sh
 data/processed/attn_full.npz
+env/

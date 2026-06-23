@@ -1,4 +1,5 @@
 from dash import html, dcc
+from . import info_tip
 
 _HIDDEN = {'display': 'none'}
 _VISIBLE = {'display': 'block', 'overflow': 'hidden', 'height': '100%'}
@@ -13,12 +14,18 @@ def create_level3_detail():
                  style={'color': '#1f2937', 'fontSize': '14px'}),
         html.Div([
             html.Div([
-                html.Div(dcc.Graph(id='token-detail-heatmap', style={'height': '100%'}),
-                         style={'flex': 1, 'minWidth': 0}),
-                html.Div(dcc.Graph(id='token-detail-probe-bar', style={'height': '100%'}),
-                         style={'flex': 1, 'minWidth': 0}),
-                html.Div(dcc.Graph(id='token-detail-dependency-curve', style={'height': '100%'}),
-                         style={'flex': 1, 'minWidth': 0}),
+                html.Div([html.Div(info_tip("Self-attention from this latent token to the visual field. Use slider to change layer (0–26)."),
+                                   style={'position': 'absolute', 'top': 2, 'left': 4, 'zIndex': 10}),
+                          dcc.Graph(id='token-detail-heatmap', style={'height': '100%'})],
+                         style={'position': 'relative', 'flex': 1, 'minWidth': 0}),
+                html.Div([html.Div(info_tip("Probe classifier output per direction for this token. Log scale to show small probabilities."),
+                                   style={'position': 'absolute', 'top': 2, 'left': 4, 'zIndex': 10}),
+                          dcc.Graph(id='token-detail-probe-bar', style={'height': '100%'})],
+                         style={'position': 'relative', 'flex': 1, 'minWidth': 0}),
+                html.Div([html.Div(info_tip("Individual KL (grey) = zeroing only this token. Marginal (cyan) = avg KL this token adds across subsets."),
+                                   style={'position': 'absolute', 'top': 2, 'left': 4, 'zIndex': 10}),
+                          dcc.Graph(id='token-detail-dependency-curve', style={'height': '100%'})],
+                         style={'position': 'relative', 'flex': 1, 'minWidth': 0}),
             ], style={'display': 'flex', 'flex': 1, 'minHeight': 0}),
             html.Div(dcc.Slider(
                 id='layer-slider',

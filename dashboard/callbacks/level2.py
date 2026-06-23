@@ -16,6 +16,7 @@ from .ablation_v2 import (
     subset_lattice,
 )
 from ..rq2_viz import build_rq2_static_bar, build_rq2_dynamic_grid
+from ..components import info_tip
 
 
 def _load_maze_image(path):
@@ -114,7 +115,9 @@ def _kl_fingerprint(sample_id, ablated_ranks):
         ], style={'flex': 1, 'minWidth': 0}))
 
     return html.Div([
-        html.Div('RQ3: KL Fingerprint', style={
+        html.Div([info_tip("All 63 token-ablation combos. Columns = k tokens zeroed. Shading = KL. Red border = plan changed. Amber = selected. Click to ablate."),
+            'RQ3: KL Fingerprint'
+        ], style={
             'fontSize': '14px', 'color': '#1f2937',
             'fontFamily': '"Open Sans", verdana, arial, sans-serif',
             'padding': '2px 4px 1px',
@@ -215,7 +218,7 @@ def _token_grid(sample, ablated_ranks=None):
                     style={'height': '100%', 'position': 'relative', 'zIndex': 1, 'backgroundColor': 'transparent'}
                 ),
                 html.Div('ABLATED', id={'type': 'token-ablated-badge', 'index': i}, style={
-                    'position': 'absolute', 'top': '2px', 'right': '2px',
+                    'position': 'absolute', 'top': '2px', 'left': '2px',
                     'backgroundColor': '#dc3545', 'color': 'white',
                     'fontSize': '8px', 'padding': '1px 4px', 'borderRadius': '3px',
                     'zIndex': 3, 'display': 'none'
@@ -227,7 +230,9 @@ def _token_grid(sample, ablated_ranks=None):
         )
 
     return html.Div([
-        html.Div("Spatial Focus (latent token heatmaps — clickable)", style={
+        html.Div([info_tip("Per-token self-attention heatmaps. Click a token to inspect in Step 3. Red border = ablated, amber = selected."),
+            "Spatial Focus (latent token heatmaps — clickable)"
+        ], style={
             'fontSize': '14px', 'color': '#1f2937',
             'textTransform': 'uppercase', 'letterSpacing': '0.05em',
             'padding': '1px 4px', 'flexShrink': 0,
@@ -333,7 +338,9 @@ def _dose_response_graph(sample_id, ablated_ranks):
         html.Div(dcc.Graph(figure=fig, config={'displayModeBar': False},
                            style={'height': '100%', 'width': '100%'}),
                  style={'flex': 1, 'minHeight': 0, 'overflow': 'hidden'}),
-    ], style={'height': '32vh', 'display': 'flex',
+        html.Div(info_tip("Median KL vs tokens zeroed. Band = min–max. Dashed = % plan changed."),
+                 style={'position': 'absolute', 'top': 2, 'left': 4, 'zIndex': 10}),
+    ], style={'height': '32vh', 'display': 'flex', 'position': 'relative',
               'flexDirection': 'column', 'padding': '0 4px'})
 
 
@@ -428,14 +435,22 @@ def register_level2_callbacks(app):
             return html.Div()
         sample_id = _get_sample_id(clickData)
         return html.Div([
-            dcc.Graph(id='rq2-dynamic-grid',
-                      figure=build_rq2_dynamic_grid(sample_id),
-                      config={'responsive': True},
-                      style={'flex': 1, 'minWidth': 0}),
-            dcc.Graph(id='rq2-static-bar',
-                      figure=build_rq2_static_bar(),
-                      config={'responsive': True},
-                      style={'flex': 1, 'minWidth': 0}),
+            html.Div([
+                html.Div(info_tip("Per-step direction probe probabilities. Brighter cells = probe more confident."),
+                         style={'position': 'absolute', 'top': 2, 'left': 4, 'zIndex': 10}),
+                dcc.Graph(id='rq2-dynamic-grid',
+                          figure=build_rq2_dynamic_grid(sample_id),
+                          config={'responsive': True},
+                          style={'flex': 1, 'minWidth': 0}),
+            ], style={'position': 'relative', 'flex': 1, 'minWidth': 0}),
+            html.Div([
+                html.Div(info_tip("Probe accuracy per model layer. Red dashed = random baseline (25%)."),
+                         style={'position': 'absolute', 'top': 2, 'left': 4, 'zIndex': 10}),
+                dcc.Graph(id='rq2-static-bar',
+                          figure=build_rq2_static_bar(),
+                          config={'responsive': True},
+                          style={'flex': 1, 'minWidth': 0}),
+            ], style={'position': 'relative', 'flex': 1, 'minWidth': 0}),
         ], style={'display': 'flex', 'flexDirection': 'row', 'height': '100%'})
 
 
@@ -472,7 +487,7 @@ def register_level2_callbacks(app):
                 'border': f'{border_width} solid {border_color}',
             })
             badge_styles.append({
-                'position': 'absolute', 'top': '2px', 'right': '2px',
+                'position': 'absolute', 'top': '2px', 'left': '2px',
                 'backgroundColor': '#dc3545', 'color': 'white',
                 'fontSize': '8px', 'padding': '1px 4px', 'borderRadius': '3px',
                 'zIndex': 3, 'display': 'block' if is_ablated else 'none'
