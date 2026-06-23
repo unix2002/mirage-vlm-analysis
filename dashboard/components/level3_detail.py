@@ -20,11 +20,17 @@ def create_level3_detail():
                     "RQ1: Latent Token Heatmap",
                     "This heatmap shows the spatial latent token attention to the original input image of the model, with a slider to select a specific layer (0 to 26).")),
                                    style={'position': 'absolute', 'top': 2, 'left': 4, 'zIndex': 10}),
-                          html.Div(id='token-detail-heatmap-bg', style={'display': 'none'}),
-                          dcc.Graph(id='token-detail-heatmap',
-                                    style={'height': '100%', 'position': 'relative', 'zIndex': 1,
-                                           'backgroundColor': 'transparent'})],
-                         style={'position': 'relative', 'flex': 1, 'minWidth': 0}),
+                          # Square, slightly smaller box so the heatmap (and the maze behind it)
+                          # never stretches to the column's aspect ratio.
+                          html.Div([
+                              html.Div(id='token-detail-heatmap-bg', style={'display': 'none'}),
+                              dcc.Graph(id='token-detail-heatmap',
+                                        style={'height': '100%', 'width': '100%', 'position': 'relative',
+                                               'zIndex': 1, 'backgroundColor': 'transparent'}),
+                          ], style={'position': 'relative', 'aspectRatio': '1 / 1', 'height': '88%',
+                                    'maxWidth': '100%', 'margin': 'auto'})],
+                         style={'position': 'relative', 'flex': 1, 'minWidth': 0, 'display': 'flex',
+                                'alignItems': 'center', 'justifyContent': 'center'}),
                 html.Div([html.Div(info_tip(tip_body(
                     "RQ2: Direction Probe",
                     "Asks a simple classifier: just from this one token, which way does the model want to move first?",

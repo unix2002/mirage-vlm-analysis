@@ -65,7 +65,6 @@ def draw_paths(draw, orig_path=None, ablated_path=None, player_pos=None, scale=5
     """Draws both original and ablated paths on the maze image."""
 
     if not player_pos:
-        print("Player position not found in the map description.")
         return None
 
     # Draw start position of the player
@@ -117,7 +116,6 @@ def maze_renderer(map_desc, orig_path, ablated_path=None, scale=50):
     """Processes all steps within a specific map instance folder."""
 
     if not map_desc or not isinstance(map_desc, list) or len(map_desc) == 0:
-        print("Skipping invalid map_desc.")
         return None
 
     grid_size = len(map_desc)

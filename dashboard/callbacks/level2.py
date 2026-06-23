@@ -160,7 +160,6 @@ def _maze_view(sample, ablated_ranks=None):
     if map_desc:
         image_src = maze_renderer(map_desc, base_plan, ablated_path=ablated_path)
     else:
-        print(f"Warning: No map_desc for sample {sample_id}, falling back to image_input.")
         image_src = _load_maze_image(sample.get('metadata', {}).get('image_input'))
 
     if not image_src:
@@ -195,7 +194,6 @@ def _token_grid(sample, ablated_ranks=None):
     base_plan = load_clean_plan(sample_id) or []
     chosen_path = base_plan
     ablated_path = None
-    print(sample)
 
     if ablated_ranks is not None:
         rr = reroute_plan(sample_id, ablated_ranks)

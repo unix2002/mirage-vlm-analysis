@@ -60,7 +60,10 @@ def _overlay_heatmap_fig(z, title):
         title=dict(text=title, font=dict(size=16, color='#1f2937')),
         font=dict(size=14, color='#1f2937'),
         paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-        xaxis=dict(visible=False), yaxis=dict(visible=False),
+        xaxis=dict(visible=False, constrain='domain'),
+        # scaleanchor ties the y scale to x so the n x n grid renders as a true
+        # square (centred in the plot area) instead of stretching to the box.
+        yaxis=dict(visible=False, scaleanchor='x', scaleratio=1, constrain='domain'),
     )
     return fig
 
@@ -76,7 +79,8 @@ def _maze_bg_style(image_src):
         'position': 'absolute', 'top': f'{_HEATMAP_TITLE_PAD}px', 'left': 0, 'right': 0, 'bottom': 0,
         'zIndex': 0,
         'backgroundImage': f'url("{image_src}")' if image_src else 'none',
-        'backgroundSize': '100% 100%', 'backgroundPosition': 'center', 'backgroundRepeat': 'no-repeat',
+        # 'contain' centres the (square) maze image to match the square heatmap above it.
+        'backgroundSize': 'contain', 'backgroundPosition': 'center', 'backgroundRepeat': 'no-repeat',
     }
 
 

@@ -11,7 +11,7 @@ def create_header():
     return dbc.Row([
         dbc.Col(
             html.Div([
-                html.H4("Latent Reasoning VLM Analysis",
+                html.H4("Visual Analytics System for Latent Reasoning",
                         className="m-0", style={'color': '#1f2937', 'fontSize': '18px'}),
                 dbc.Button("?", id="help-btn-global", color="info", outline=True, size="sm",
                            title="About this dashboard",
