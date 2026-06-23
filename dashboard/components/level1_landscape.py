@@ -39,7 +39,7 @@ def _compute_y_stretch(viewport, df):
     return (vp_w / vp_h) / 0.74 if vp_h > 0 else 1.0
 
 
-def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, viewport=None, highlight_flippers=False):
+def create_level1_landscape(data_source, color_metric='level_id', zoom_level=1.0, viewport=None, highlight_flippers=False):
     if not data_source:
         return go.Figure().update_layout(title="No Data Available")
 
