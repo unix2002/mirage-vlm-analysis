@@ -134,8 +134,34 @@ def create_help_modals():
         ], id="help-modal-step1", is_open=False, size="lg", centered=True),
         
         dbc.Modal([
-            dbc.ModalHeader(dbc.ModalTitle("Help: Reasoning Path Analysis")),
-            dbc.ModalBody("This section lets you inspect the internal reasoning path. Use 'Probing' to see which maze cells the model focuses on at each step. Use 'Ablation' to see what happens when specific reasoning paths are altered. Click on a sample in Step 1 to load it here."),
+            dbc.ModalHeader(dbc.ModalTitle("Help: Reasoning Path Analysis (RQ2 Probe) and Ablation")),
+            dbc.ModalBody(html.Div([
+                html.P("This section lets you inspect the internal reasoning path. Use 'Probing' to see which maze cells the model focuses on at each step. Use 'Ablation' to see what happens when specific reasoning paths are altered. Click on a sample in Step 1 to load it here."),
+          
+                html.H6("Understanding the Probing Figures:", className="mt-3 mb-2 font-weight-bold"),
+                html.Div([
+                    html.P([
+                        html.B("Layer-wise Bar Chart: "),
+                        "Shows overall probe accuracy across transformer layers. Higher bars = more directional information. "
+                        "The dashed red line is the random baseline (0.25 = 1/4 directions in a maze). "
+                        "Layers above baseline contain useful spatial information."
+                    ]),
+                    html.P([
+                        html.B("Decodability Grid: "),
+                        "For a selected sample, shows per-step accuracy for each direction. "
+                        "Each row is a planning step; each column is a compass direction. "
+                        "Darker cyan = higher probability; lighter cyan = lower. "
+                        "The bold text highlights true moves (where the model actually stepped). "
+                        "Patterns show which steps are most predictable and where the model's reasoning varies."
+                    ], className="mb-0")
+                ]),
+                
+                html.Hr(),
+                html.P(
+                    html.Small("Click 'Ablation' tab to see what happens when tokens are removed."),
+                    className="text-muted"
+                )
+            ])),
         ], id="help-modal-step2", is_open=False, size="lg", centered=True),
 
         dbc.Modal([
