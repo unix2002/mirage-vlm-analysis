@@ -11,7 +11,7 @@ def test_level1_landscape_returns_graph():
     component = create_level1_landscape(MOCK_DATA)
     # The component is now returning a go.Figure instead of dcc.Graph directly
     assert isinstance(component, go.Figure)
-    assert component.layout.title.text == "Fig 1. Latent Reasoning Landscape"
+    assert component.layout.title.text == "UMAP Latent Reasoning Landscape"
 
 def test_level2_path_structure():
     top = create_level2_top()

@@ -438,24 +438,7 @@ def register_level2_callbacks(app):
                       style={'flex': 1, 'minWidth': 0}),
         ], style={'display': 'flex', 'flexDirection': 'row', 'height': '100%'})
 
-    @app.callback(
-        Output('level2-plan-status-row', 'children'),
-        [Input('level1-scatter', 'clickData'),
-         Input('ablation-state', 'data')]
-    )
-    def update_plan_status(clickData, ablation_state):
-        if not clickData:
-            return html.Div(className='p-1')
-        sample_id = _get_sample_id(clickData)
-        ablated = _ablated_ranks(ablation_state)
-        plan, cc, ac = _ablated_plan_row(sample_id, ablated)
-        rr = reroute_plan(sample_id, ablated)
-        if rr:
-            base, new = rr
-            return html.Div(_plan_row(base, cc, ac, new_plan=new),
-                            style={'display': 'flex', 'justifyContent': 'center'})
-        return html.Div(_plan_row(plan, cc, ac),
-                        style={'display': 'flex', 'justifyContent': 'center'})
+
 
     @app.callback(
         Output('level2-token-grid', 'children'),

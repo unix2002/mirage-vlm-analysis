@@ -23,7 +23,7 @@ def test_update_level2_logic_valid_click():
 
 def test_update_level3_logic_no_clicks():
     fig1, fig2, fig3, text, store = update_level3_logic([0], None, None)
-    assert text == "Level 3: Token Details"
+    assert text == "Step 3: Token Details"
     assert isinstance(store, dict)
 
 
