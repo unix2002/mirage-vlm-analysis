@@ -26,6 +26,7 @@ _HOVER_TEMPLATE = (
     "Seq Len: %{customdata[3]}<br>"
     "Level: %{customdata[4]}<br>"
     "Projection Error: %{customdata[5]:.4f}<br>"
+    "Solution Len: %{customdata[6]}<br>"
 )
 
 
@@ -89,6 +90,7 @@ def create_level1_landscape(data_source, color_metric='level_id', zoom_level=1.0
             'num_tokens': len(s['tokens']),
             'level_id': s.get('level_id', 0),
             'seq_len': s.get('seq_len', 0),
+            'solution_length': s.get('solution_length', 0),
             'num_latent': s.get('num_latent', 6),
             'has_plan_flip': s.get('has_plan_flip', False),
             'map_desc': s.get('map_desc'),
@@ -117,7 +119,8 @@ def create_level1_landscape(data_source, color_metric='level_id', zoom_level=1.0
         'level_id': 'Level ID',
         'seq_len': 'Seq Length',
         'num_latent': 'Latent Tokens',
-        'umap_uncertainty': 'Projection Error'
+        'umap_uncertainty': 'Projection Error',
+        'solution_length': 'Solution Length / Walking length'
     }
     color_title = metric_labels.get(color_metric, color_metric)
 
@@ -212,7 +215,7 @@ def create_level1_landscape(data_source, color_metric='level_id', zoom_level=1.0
             ),
             text=df['sample_id'],
             hovertext=df['sample_id'],
-            customdata=df[['move_direction', 'correctness', 'avg_kl', 'seq_len', 'level_id', 'umap_uncertainty']],
+            customdata=df[['move_direction', 'correctness', 'avg_kl', 'seq_len', 'level_id', 'umap_uncertainty', 'solution_length']],
             hovertemplate=_HOVER_TEMPLATE + "<extra></extra>"
         ))
 
@@ -332,7 +335,7 @@ def create_level1_landscape(data_source, color_metric='level_id', zoom_level=1.0
             marker=dict(size=20, color='rgba(0,0,0,0)'), # Invisible
             text=df['sample_id'],
             hovertext=df['sample_id'],
-            customdata=df[['move_direction', 'correctness', 'avg_kl', 'seq_len', 'level_id', 'umap_uncertainty']],
+            customdata=df[['move_direction', 'correctness', 'avg_kl', 'seq_len', 'level_id', 'umap_uncertainty', 'solution_length']],
             hovertemplate=_HOVER_TEMPLATE + "<b>[Micro-Maze View]</b><br><extra></extra>",
             showlegend=False,
             name='Maze Hover'

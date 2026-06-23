@@ -223,6 +223,12 @@ class RealDataLoader:
                 map_desc = maze_info.get('map_desc')
                 full_path = maze_info.get('full_path')
 
+                solution_length = 0
+                if full_path:
+                    match_path = re.search(r'\\boxed{([^}]+)}', full_path)
+                    if match_path:
+                        solution_length = len([m for m in match_path.group(1).split(',') if m.strip()])
+
                 # Attention
                 real_attn = None
                 last_layer = None
@@ -327,6 +333,7 @@ class RealDataLoader:
                     'level_id': level_id,
                     'map_id': map_id,
                     'seq_len': seq_len,
+                    'solution_length': solution_length,
                     'num_latent': num_latent,
                     'umap_x': 0.0,
                     'umap_y': 0.0,

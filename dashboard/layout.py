@@ -63,8 +63,7 @@ def create_sidebar():
                             options=[
                                 {'label': 'Reasoning Intensity (KL)', 'value': 'avg_kl'},
                                 {'label': 'Level ID', 'value': 'level_id'},
-                                {'label': 'Sequence Length', 'value': 'seq_len'},
-                                {'label': 'Num Latent Tokens', 'value': 'num_latent'},
+                                {'label': 'Solution Length / Walking length', 'value': 'solution_length'},
                                 {'label': 'Projection Error', 'value': 'umap_uncertainty'}
                             ],
                             value='level_id',
