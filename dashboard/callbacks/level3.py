@@ -27,8 +27,9 @@ def _extract_active_click(token_clicks):
 def _style_detail_fig(fig, title):
     """Apply shared compact margin + title for all Level 3 figures."""
     fig.update_layout(
-        margin=dict(l=5, r=5, t=20, b=5),
-        title=dict(text=title, font=dict(size=10)),
+        margin=dict(l=5, r=5, t=30, b=5),
+        title=dict(text=title, font=dict(size=16, color='#1f2937')),
+        font=dict(size=14, color='#1f2937'),
     )
     return fig
 
@@ -87,8 +88,8 @@ def update_level3_logic(token_clicks, clickData, triggered_id_full, data=None):
                 fig_bar.add_trace(go.Bar(x=dirs, y=values, marker_color=colors, showlegend=False))
     _style_detail_fig(fig_bar, f"RQ2: Direction Probe (Token {token_id})")
     fig_bar.update_layout(
-        yaxis=dict(type='log', tickfont=dict(size=8)),
-        xaxis=dict(tickfont=dict(size=8))
+        yaxis=dict(type='log', tickfont=dict(size=14, color='#1f2937')),
+        xaxis=dict(tickfont=dict(size=14, color='#1f2937'))
     )
 
     contribs = token_marginal_contributions(sample_id)
@@ -105,9 +106,9 @@ def update_level3_logic(token_clicks, clickData, triggered_id_full, data=None):
         fig_curve.update_layout(barmode='group')
         _style_detail_fig(fig_curve, f"RQ3: Token Ablation Contributions (Token {token_id})")
         fig_curve.update_layout(
-            xaxis=dict(tickfont=dict(size=8)),
-            yaxis=dict(tickfont=dict(size=8)),
-            legend=dict(font=dict(size=7)),
+            xaxis=dict(tickfont=dict(size=14, color='#1f2937')),
+            yaxis=dict(tickfont=dict(size=14, color='#1f2937')),
+            legend=dict(font=dict(size=14, color='#1f2937')),
         )
     else:
         fig_curve = go.Figure()

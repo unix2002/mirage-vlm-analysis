@@ -13,7 +13,7 @@ _MAX_GRID_STEPS = 9
 
 def _empty_rq2_fig(height=300):
     return go.Figure().update_layout(
-        title=dict(text="RQ2: Probe data not found", font=dict(size=12)),
+        title=dict(text="Probe data not found", font=dict(size=16, color='#1f2937')),
         template="plotly_white", height=height)
 
 def load_rq2_data():
@@ -62,12 +62,14 @@ def build_rq2_static_bar(probe_results=None):
         )
     )
     fig.update_layout(
-        title=dict(text="RQ2: Layer-wise Decodability (Global)", font=dict(size=12)),
+        title=dict(text="Layer-wise Decodability (Global)", font=dict(size=16, color='#1f2937')),
         xaxis_title="Layer",
         yaxis_title="Accuracy",
         template="plotly_white",
         height=324,
-        margin=dict(l=40, r=20, t=40, b=40)
+        margin=dict(l=40, r=20, t=40, b=40),
+        font=dict(size=14, color='#1f2937'),
+        legend=dict(font=dict(size=14, color='#1f2937'))
     )
     return fig
 
@@ -87,7 +89,7 @@ def build_rq2_dynamic_grid(sample_id, layer=26, per_sample_payload=None):
     
     sample_blob = samples.get(lookup_id)
     if not sample_blob:
-        return go.Figure().update_layout(title=f"Sample {sample_id} not found in RQ2 data")
+        return go.Figure().update_layout(title=f"Sample {sample_id} not found in data")
 
     true_moves = sample_blob.get("true_move_sequence", [])
     layer_key = str(layer)
@@ -173,19 +175,20 @@ def build_rq2_dynamic_grid(sample_id, layer=26, per_sample_payload=None):
         colorscale=[[0, "#e0f2fe"], [1, "#06b6d4"]],
         text=text_vals,
         texttemplate="%{text}",
-        textfont={"size": 12},
+        textfont={"size": 14, "color": "#1f2937"},
         showscale=False,
         xgap=1, ygap=1,
         hovertemplate="Step %{y}<br>%{x}<br>Prob: %{z:.3f}<extra></extra>"
     ))
 
     fig.update_layout(
-        title=dict(text="RQ2: Decodability Grid", font=dict(size=12)),
+        title=dict(text="Decodability Grid", font=dict(size=16, color='#1f2937')),
         xaxis_title="Direction",
         yaxis_title="Sequence Step",
         template="plotly_white",
         height=324,
-        margin=dict(l=40, r=20, t=40, b=40)
+        margin=dict(l=40, r=20, t=40, b=40),
+        font=dict(size=14, color='#1f2937')
     )
     fig.update_yaxes(autorange="reversed")
     return fig

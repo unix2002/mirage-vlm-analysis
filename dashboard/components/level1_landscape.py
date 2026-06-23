@@ -21,9 +21,7 @@ _DIRECTION_COLORS = {
 
 _HOVER_TEMPLATE = (
     "<b>%{text}</b><br>"
-    "Correct: %{customdata[1]}<br>"
     "Avg KL Div: %{customdata[2]:.2f}<br>"
-    "Seq Len: %{customdata[3]}<br>"
     "Level: %{customdata[4]}<br>"
     "Projection Error: %{customdata[5]:.4f}<br>"
     "Solution Len: %{customdata[6]}<br>"
@@ -199,14 +197,14 @@ def create_level1_landscape(data_source, color_metric='level_id', zoom_level=1.0
                 showscale=True,
                 opacity=macro_opacity,
                 colorbar=dict(
-                    title=dict(text=color_title, side='bottom', font=dict(size=10)),
+                    title=dict(text=color_title, side='bottom', font=dict(size=14, color='#1f2937')),
                     orientation='h',
                     thickness=12,
                     len=0.6,
                     y=-0.28,
                     x=0.5,
                     xanchor='center',
-                    tickfont=dict(size=10)
+                    tickfont=dict(size=14, color='#1f2937')
                 ) if macro_opacity > 0.5 else None,
                 line=dict(
                     width=1.5,
@@ -348,35 +346,35 @@ def create_level1_landscape(data_source, color_metric='level_id', zoom_level=1.0
         showlegend=False,
         autosize=True,
         xaxis=dict(
-            title="UMAP Latent Dimension 1",
+            title=dict(text="UMAP Latent Dimension 1", font=dict(size=14, color='#1f2937')),
             showgrid=True,
             gridwidth=1,
             gridcolor='#f0f0f0',
             zeroline=True,
             zerolinecolor='#e0e0e0',
             showticklabels=True,
-            tickfont=dict(size=10, color='#666')
+            tickfont=dict(size=14, color='#1f2937')
         ),
         yaxis=dict(
-            title="UMAP Latent Dimension 2",
+            title=dict(text="UMAP Latent Dimension 2", font=dict(size=14, color='#1f2937')),
             showgrid=True,
             gridwidth=1,
             gridcolor='#f0f0f0',
             zeroline=True,
             zerolinecolor='#e0e0e0',
             showticklabels=True,
-            tickfont=dict(size=10, color='#666'),
+            tickfont=dict(size=14, color='#1f2937'),
             scaleanchor='x',
             scaleratio=1,
         ),
         plot_bgcolor='white',
         paper_bgcolor='white',
-        font=dict(family="Arial, sans-serif", size=12, color="#333"),
+        font=dict(family="Arial, sans-serif", size=14, color="#1f2937"),
         title=dict(
             text="UMAP Latent Reasoning Landscape",
             x=0.05,
             y=0.98,
-            font=dict(size=15, color="#111")
+            font=dict(size=16, color="#1f2937")
         )
     )
 

@@ -9,11 +9,11 @@ from .data_loader import LOADER
 def create_header():
     return dbc.Row([
         dbc.Col(html.H4("Latent Reasoning VLM Analysis",
-                className="text-primary m-0", style={'paddingLeft': '10px'}), width=12),
+                    className="m-0", style={'paddingLeft': '10px', 'color': '#1f2937', 'fontSize': '18px'}), width=12),
     ], className="py-2 border-bottom bg-light", style={'height': '5vh'})
 
 
-_HEADER_CLASS = "py-1 small font-weight-bold"
+_HEADER_CLASS = "py-1 font-weight-bold"
 
 
 def create_sidebar():
@@ -21,8 +21,8 @@ def create_sidebar():
         dbc.Card([
             dbc.CardHeader(
                 html.Div([
-                    html.Span("Step 1: Sample Selection & UMAP Tuner", className="align-self-center"),
-                    dbc.Button("HELP", id="help-btn-step1", size="sm", color="info", outline=True, className="ms-auto py-0 px-2", style={'fontSize': '0.75rem'})
+                    html.Span("Step 1: Sample Selection & UMAP Tuner", className="align-self-center", style={'color': '#1f2937', 'fontSize': '14px'}),
+                    dbc.Button("HELP", id="help-btn-step1", size="sm", color="info", outline=True, className="ms-auto py-0 px-2", style={'fontSize': '14px'})
                 ], style={'display': 'flex', 'justifyContent': 'space-between', 'alignItems': 'center'}),
                 className=_HEADER_CLASS
             ),
@@ -36,7 +36,7 @@ def create_sidebar():
                 html.Hr(className="my-2"),
                 html.Div([
                     html.Div([
-                        html.Label("Nearest Neighbors (n_neighbors)", className="small text-muted mb-0"),
+                        html.Label("Nearest Neighbors (n_neighbors)", className="mb-0", style={'color': '#1f2937', 'fontSize': '14px'}),
                         dcc.Slider(
                             id='umap-neighbors-slider',
                             min=2, max=30, step=1, value=5,
@@ -46,7 +46,7 @@ def create_sidebar():
                     ], className="mb-3"),
 
                     html.Div([
-                        html.Label("Minimum Distance (min_dist)", className="small text-muted mb-0"),
+                        html.Label("Minimum Distance (min_dist)", className="mb-0", style={'color': '#1f2937', 'fontSize': '14px'}),
                         dcc.Slider(
                             id='umap-dist-slider',
                             min=0.0, max=1.0, step=0.05, value=0.3,
@@ -59,11 +59,12 @@ def create_sidebar():
                         id="umap-flippers-toggle",
                         label="Highlight Plan Flippers",
                         value=False,
-                        className="small text-muted mb-2"
+                        className="mb-2",
+                        style={'color': '#1f2937', 'fontSize': '14px'}
                     ),
 
                     html.Div([
-                        html.Label("Color Metric", className="small text-muted mb-0"),
+                        html.Label("Color Metric", className="mb-0", style={'color': '#1f2937', 'fontSize': '14px'}),
                         dcc.Dropdown(
                             id='umap-color-dropdown',
                             options=[
@@ -88,7 +89,7 @@ def create_main_content():
         dbc.Card([
             dbc.CardHeader(
                 html.Div([
-                    html.Span("Step 2: Reasoning Path Analysis", id='level2-header-title', className="align-self-center small font-weight-bold"),
+                    html.Span("Step 2: Reasoning Path Analysis", id='level2-header-title', className="align-self-center font-weight-bold", style={'color': '#1f2937', 'fontSize': '14px'}),
                     dbc.RadioItems(
                         id='level2-tab-selector',
                         options=[
@@ -101,7 +102,7 @@ def create_main_content():
                         inputClassName='btn-check',
                         labelClassName='btn btn-outline-secondary btn-sm px-2 py-0',
                     ),
-                    dbc.Button("HELP", id="help-btn-step2", size="sm", color="info", outline=True, className="ms-2 py-0 px-2", style={'fontSize': '0.75rem'})
+                    dbc.Button("HELP", id="help-btn-step2", size="sm", color="info", outline=True, className="ms-2 py-0 px-2", style={'fontSize': '14px'})
                 ], style={'display': 'flex', 'justifyContent': 'space-between', 'alignItems': 'center'}),
                 className="py-1"
             ),
@@ -116,8 +117,8 @@ def create_main_content():
         dbc.Card([
             dbc.CardHeader(
                 html.Div([
-                    html.Span("Step 3: Token Details", id='level3-instructions', className="align-self-center"),
-                    dbc.Button("HELP", id="help-btn-step3", size="sm", color="info", outline=True, className="ms-auto py-0 px-2", style={'fontSize': '0.75rem'})
+                    html.Span("Step 3: Token Details", id='level3-instructions', className="align-self-center", style={'color': '#1f2937', 'fontSize': '14px'}),
+                    dbc.Button("HELP", id="help-btn-step3", size="sm", color="info", outline=True, className="ms-auto py-0 px-2", style={'fontSize': '14px'})
                 ], style={'display': 'flex', 'justifyContent': 'space-between', 'alignItems': 'center'}),
                 className=_HEADER_CLASS
             ),
