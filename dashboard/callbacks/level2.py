@@ -168,6 +168,7 @@ def _token_grid(sample, ablated_ranks=None):
     base_plan = load_clean_plan(sample_id) or []
     chosen_path = base_plan
     ablated_path = None
+    print(sample)
 
     if ablated_ranks is not None:
         rr = reroute_plan(sample_id, ablated_ranks)

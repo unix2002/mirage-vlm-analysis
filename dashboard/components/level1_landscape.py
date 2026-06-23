@@ -240,6 +240,7 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
         all_path_x, all_path_y = [], []
         all_start_x, all_start_y = [], []
         all_end_x, all_end_y = [], []
+        all_obstacle_x, all_obstacle_y = [], []
 
         # Keep mazes consistent on screen across zoom levels
         base_scale = 3.0 / max(1.0, zoom_level)
@@ -262,6 +263,8 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
             all_start_y.extend(traces['start_y'])
             all_end_x.extend(traces['end_x'])
             all_end_y.extend(traces['end_y'])
+            all_obstacle_x.extend(traces['obstacle_x'])
+            all_obstacle_y.extend(traces['obstacle_y'])
 
         # Background Grid
         if all_grid_x:
@@ -283,6 +286,18 @@ def create_level1_landscape(data_source, color_metric='avg_kl', zoom_level=1.0, 
                 hoverinfo='skip',
                 showlegend=False,
                 name='Solution Path'
+            ))
+
+        # Obstacles
+        if all_obstacle_x:
+            fig.add_trace(go.Scatter(
+                x=all_obstacle_x, y=all_obstacle_y,
+                mode='markers',
+                marker=dict(color='black', size=2.5, symbol='square'),
+                hoverinfo='skip',
+                showlegend=False,
+                name='Obstacles',
+                unselected=dict(marker=dict(opacity=1))
             ))
 
         # Start Points

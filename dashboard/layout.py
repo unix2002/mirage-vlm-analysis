@@ -9,7 +9,7 @@ from .data_loader import LOADER
 def create_header():
     return dbc.Row([
         dbc.Col(html.H4("Latent Reasoning VLM Analysis",
-                className="text-primary m-0"), width=12),
+                className="text-primary m-0", style={'paddingLeft': '10px'}), width=12),
     ], className="py-2 border-bottom bg-light", style={'height': '5vh'})
 
 

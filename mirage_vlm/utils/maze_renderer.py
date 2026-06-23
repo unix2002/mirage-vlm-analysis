@@ -25,6 +25,8 @@ def generate_maze_traces(map_desc, full_path, center_x, center_y, scale=0.8, y_s
     start_y = center_y + (scale / y_stretch) / 2
     
     grid_x, grid_y = [], []
+
+    obstacle_x, obstacle_y = [], []
     
     # Draw horizontal lines for the grid
     for r in range(rows + 1):
@@ -49,13 +51,15 @@ def generate_maze_traces(map_desc, full_path, center_x, center_y, scale=0.8, y_s
     end_px, end_py = [], []
     start_pos = None
     
-    # Find start position (where cell value is 1)
+    # Find start position and holes (where cell value is 1)
     for r in range(rows):
         for c in range(cols):
             if map_desc[r][c] == 1:
                 start_pos = (r, c)
-                break
-        if start_pos: break
+            if map_desc[r][c] == -1:
+                px, py = get_center(r, c)
+                obstacle_x.append(px)
+                obstacle_y.append(py)
         
     if start_pos and full_path:
         curr_r, curr_c = start_pos
@@ -100,7 +104,7 @@ def generate_maze_traces(map_desc, full_path, center_x, center_y, scale=0.8, y_s
     return {
         'grid_x': grid_x, 'grid_y': grid_y,
         'path_x': path_x, 'path_y': path_y,
-        'obstacle_x': [], 'obstacle_y': [],
+        'obstacle_x': obstacle_x, 'obstacle_y': obstacle_y,
         'start_x': start_px, 'start_y': start_py,
         'end_x': end_px, 'end_y': end_py
     }
