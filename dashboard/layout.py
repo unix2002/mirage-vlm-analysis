@@ -28,7 +28,7 @@ def create_sidebar():
             ),
             dbc.CardBody([
                 dcc.Graph(
-                    id='level1-scatter', 
+                    id='level1-scatter',
                     figure=create_level1_landscape(LOADER.get_data()),
                     style={'height': '55vh', 'width': '100%'},
                     config={'responsive': True}
@@ -44,7 +44,7 @@ def create_sidebar():
                             className="p-0"
                         ),
                     ], className="mb-3"),
-                    
+
                     html.Div([
                         html.Label("Minimum Distance (min_dist)", className="small text-muted mb-0"),
                         dcc.Slider(
@@ -130,9 +130,39 @@ def create_help_modals():
     return html.Div([
         dbc.Modal([
             dbc.ModalHeader(dbc.ModalTitle("Help: Sample Selection & UMAP Tuner")),
-            dbc.ModalBody("Use the scatter plot to select samples for detailed analysis. The UMAP projection clusters samples based on their latent reasoning representations. You can tune the UMAP parameters and use the color metric dropdown to highlight different aspects of the data."),
+            dbc.ModalBody(dcc.Markdown("""
+This interactive scatter plot projects high-dimensional latent reasoning representations from the VLM into a 2D space. Each point represents a specific maze-solving sample, allowing you to explore how the model's internal reasoning clusters across different scenarios.
+
+## Zooming (Macro vs. Micro View)
+The plot dynamically transitions between two views based on your zoom level:
+
+#### 1. Macro View (Zoomed out)
+* **Glyphs (Next Move):** Shapes represent the model's predicted next move:
+  * `▲` UP
+  * `▼` DOWN
+  * `◀` LEFT
+  * `▶` RIGHT
+  * `●` UNKNOWN
+* **Glyph Size:** Scales with Reasoning Intensity (KL divergence).
+* **Convex Hulls:** At very high-level zoom level, shaded background regions enclose clusters of the same directional decision.
+* **Projection Error Aura:** Starting when zoomed a bit in, a gray circular aura fades in around points. The size of this aura indicates UMAP placement uncertainty (projection error). It fades out as you approach the Micro View.
+
+#### 2. Micro View (Zoomed in)
+As the zoom level becomes more fine-grained, the macro triangles and auras fade out, revealing miniature mazes directly on the map.
+* **Light Gray Lines:** The maze grid topology.
+* **Black Squares:** Walls and obstacles.
+* **Blue Circle:** Start point.
+* **Green Circle:** End goal.
+* **Red Line:** The VLM's predicted solution path.
+
+## UMAP Tuner & Color Metrics
+* **Nearest Neighbors**: Controls the balance between local fine-grained clusters (low) and global structure (high).
+* **Minimum Distance**: Controls how tightly points are packed. Lower values create tighter clumps.
+* **Color Dropdown**: Recolor points by metrics like **Reasoning Intensity** (average KL divergence), **Level ID**, or **Projection Error**.
+* **Plan Flippers**: Toggle to outline samples with a red border where altering latent tokens caused the model to change its planned path.
+            """)),
         ], id="help-modal-step1", is_open=False, size="lg", centered=True),
-        
+
         dbc.Modal([
             dbc.ModalHeader(dbc.ModalTitle("Help: Reasoning Path Analysis")),
             dbc.ModalBody("This section lets you inspect the internal reasoning path. Use 'Probing' to see which maze cells the model focuses on at each step. Use 'Ablation' to see what happens when specific reasoning paths are altered. Click on a sample in Step 1 to load it here."),
