@@ -68,7 +68,7 @@ def _kl_fingerprint(sample_id, ablated_ranks):
     lat = subset_lattice(sample_id)
     if not lat or not lat['cells']:
         return html.Div('No combinatorial data for this sample',
-                        className='small text-muted', style={'padding': '8px'})
+                        style={'padding': '8px', 'color': '#1f2937', 'fontSize': '14px'})
 
     n = lat['n']
     max_kl = lat['max_kl'] or 1e-9
@@ -96,9 +96,9 @@ def _kl_fingerprint(sample_id, ablated_ranks):
             title=hover,
             style={
                 'display': 'flex', 'gap': '1px', 'justifyContent': 'center', 'alignItems': 'center',
-                'padding': '3px 2px', 'borderRadius': '3px', 'cursor': 'pointer',
+                'padding': '2px 1px', 'borderRadius': '3px', 'cursor': 'pointer',
                 'backgroundColor': f'rgba(6,182,212,{alpha:.3f})',
-                'border': f'1.5px solid {border_color}',
+                'border': f'1px solid {border_color}',
             })
 
     columns = []
@@ -106,21 +106,21 @@ def _kl_fingerprint(sample_id, ablated_ranks):
         kcells = sorted((c for c in lat['cells'] if c['k'] == k), key=lambda c: -c['kl'])
         columns.append(html.Div([
             html.Div(f'k{k}', style={
-                'fontSize': '0.45rem', 'color': '#94a3b8', 'fontFamily': 'monospace',
+                'fontSize': '14px', 'color': '#1f2937', 'fontFamily': 'monospace',
                 'textAlign': 'center', 'marginBottom': '2px',
             }),
             html.Div([_cell(c) for c in kcells],
-                     style={'display': 'flex', 'flexDirection': 'column', 'gap': '2px'}),
+                     style={'display': 'flex', 'flexDirection': 'column', 'gap': '1px'}),
         ], style={'flex': 1, 'minWidth': 0}))
 
     return html.Div([
         html.Div('RQ3: KL Fingerprint', style={
-            'fontSize': '0.75rem', 'color': '#333',
+            'fontSize': '14px', 'color': '#1f2937',
             'fontFamily': '"Open Sans", verdana, arial, sans-serif',
             'padding': '2px 4px 1px',
         }),
         html.Div('shade = KL · dots = tokens zeroed (T0–T5) · red = plan changed · hover for value', style={
-            'fontSize': '0.5rem', 'color': '#666', 'padding': '0 4px 4px',
+            'fontSize': '12px', 'color': '#1f2937', 'padding': '0 4px 2px',
         }),
         html.Div(columns, style={
             'display': 'flex', 'gap': '3px', 'padding': '0 4px 4px', 'alignItems': 'flex-start',
@@ -147,7 +147,7 @@ def _maze_view(sample, ablated_ranks=None):
         image_src = _load_maze_image(sample.get('metadata', {}).get('image_input'))
 
     if not image_src:
-        return html.Div('Maze image unavailable.', className='small text-muted p-2')
+        return html.Div('Maze image unavailable.', className='p-2', style={'color': '#1f2937', 'fontSize': '14px'})
 
     return html.Div([
         html.Img(src=image_src, style={
@@ -228,7 +228,7 @@ def _token_grid(sample, ablated_ranks=None):
 
     return html.Div([
         html.Div("Spatial Focus (latent token heatmaps — clickable)", style={
-            'fontSize': '0.55rem', 'color': '#9ca3af',
+            'fontSize': '14px', 'color': '#1f2937',
             'textTransform': 'uppercase', 'letterSpacing': '0.05em',
             'padding': '1px 4px', 'flexShrink': 0,
         }),
@@ -263,11 +263,11 @@ def _plan_row(clean_plan, mean_clean_conf, mean_abl_conf, new_plan=None):
 
     children = [
         html.Span('Predicted plan — rerouted' if rerouted else 'Predicted plan', style={
-            'fontSize': '0.55rem', 'color': accent if rerouted else '#888',
+            'fontSize': '14px', 'color': accent if rerouted else '#1f2937',
             'textTransform': 'uppercase', 'letterSpacing': '0.1em', 'marginBottom': '2px',
             'fontWeight': 'bold' if rerouted else 'normal',
         }),
-        html.Div(glyphs or html.Span('—', style={'fontSize': '0.8rem', 'color': '#bbb'}), style={
+        html.Div(glyphs or html.Span('—', style={'fontSize': '14px', 'color': '#1f2937'}), style={
             'display': 'flex', 'alignItems': 'center', 'gap': '5px', 'padding': '2px 10px',
             'border': f'1px solid {accent}{"80" if rerouted else "40"}', 'borderRadius': '5px',
             'backgroundColor': f'{accent}{"14" if rerouted else "0d"}',
@@ -275,10 +275,10 @@ def _plan_row(clean_plan, mean_clean_conf, mean_abl_conf, new_plan=None):
     ]
     if rerouted:
         children.append(html.Div(
-            [html.Span('was', style={'color': '#aaa', 'marginRight': '4px'})] +
-            [html.Span(_DIR_GLYPH.get(d, '?'), style={'color': '#aaa', 'marginLeft': '2px'})
+            [html.Span('was', style={'color': '#1f2937', 'marginRight': '4px'})] +
+            [html.Span(_DIR_GLYPH.get(d, '?'), style={'color': '#1f2937', 'marginLeft': '2px'})
              for d in clean_plan],
-            style={'fontSize': '0.5rem', 'marginTop': '2px', 'textDecoration': 'line-through'}))
+            style={'fontSize': '14px', 'marginTop': '2px', 'textDecoration': 'line-through'}))
 
     return html.Div(children, style={
         'display': 'flex', 'flexDirection': 'column', 'alignItems': 'center', 'padding': '4px 0'})
@@ -289,7 +289,7 @@ def _dose_response_graph(sample_id, ablated_ranks):
     secondary axis, and the current selection marked as a 'you are here' dot."""
     dr = sample_dose_response(sample_id)
     if not dr or not dr['rows']:
-        return html.Div('No ablation landscape data', className='small text-muted', style={'padding': '4px 8px'})
+        return html.Div('No ablation landscape data', style={'padding': '4px 8px', 'color': '#1f2937', 'fontSize': '14px'})
 
     rows = dr['rows']
     ks = [r['k'] for r in rows]
@@ -317,16 +317,16 @@ def _dose_response_graph(sample_id, ablated_ranks):
                                  name='current selection', showlegend=True))
 
     fig.update_layout(
-        title=dict(text='RQ3: Dose-Response Curve', font=dict(size=12)),
+        title=dict(text='Dose-Response Curve', font=dict(size=16, color='#1f2937')),
         template='plotly_white',
-        margin=dict(l=30, r=28, t=40, b=18), font=dict(size=8),
+        margin=dict(l=30, r=28, t=40, b=18), font=dict(size=14, color='#1f2937'),
         hovermode='x unified', paper_bgcolor='rgba(0,0,0,0)',
         legend=dict(orientation='v', x=1, y=1, xanchor='left', yanchor='top',
-                    font=dict(size=7), bgcolor='rgba(255,255,255,0.7)'),
-        xaxis=dict(title=dict(text='latent tokens zeroed', font=dict(size=8)),
-                   dtick=1, tickfont=dict(size=7)),
-        yaxis=dict(title=dict(text='KL', font=dict(size=8)), tickfont=dict(size=7), rangemode='tozero'),
-        yaxis2=dict(overlaying='y', side='right', range=[0, 100], tickfont=dict(size=7),
+                    font=dict(size=14, color='#1f2937'), bgcolor='rgba(255,255,255,0.7)'),
+        xaxis=dict(title=dict(text='latent tokens zeroed', font=dict(size=14, color='#1f2937')),
+                   dtick=1, tickfont=dict(size=14, color='#1f2937')),
+        yaxis=dict(title=dict(text='KL', font=dict(size=14, color='#1f2937')), tickfont=dict(size=14, color='#1f2937'), rangemode='tozero'),
+        yaxis2=dict(overlaying='y', side='right', range=[0, 100], tickfont=dict(size=14, color='#1f2937'),
                     tickvals=[0, 50, 100], ticktext=['0', '50', '100%']),
     )
     return html.Div([
@@ -420,7 +420,7 @@ def register_level2_callbacks(app):
         if not clickData:
             return html.Div("Select a Sample (Step 1)", style={
                 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center',
-                'height': '100%', 'color': '#888', 'fontSize': '0.65rem',
+                'height': '100%', 'color': '#1f2937', 'fontSize': '14px',
                 'textTransform': 'uppercase', 'letterSpacing': '0.05em',
                 'padding': '8px',
             })

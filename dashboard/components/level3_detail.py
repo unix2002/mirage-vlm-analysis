@@ -9,7 +9,8 @@ def create_level3_detail():
         dcc.Store(id='current-token-state', data={}),
         dcc.Store(id='ablation-state', data={'ablated_ranks': []}),
         html.Div("select a latent token (step 2)", id='level3-placeholder',
-                 className="text-muted small d-flex justify-content-center align-items-center h-100"),
+                 className="d-flex justify-content-center align-items-center h-100",
+                 style={'color': '#1f2937', 'fontSize': '14px'}),
         html.Div([
             html.Div([
                 html.Div(dcc.Graph(id='token-detail-heatmap', style={'height': '100%'}),
