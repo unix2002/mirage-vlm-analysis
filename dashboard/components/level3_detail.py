@@ -12,11 +12,11 @@ def create_level3_detail():
                  className="text-muted small d-flex justify-content-center align-items-center h-100"),
         html.Div([
             html.Div([
-                html.Div(dcc.Graph(id='token-detail-heatmap', style={'height': '24vh'}),
+                html.Div(dcc.Graph(id='token-detail-heatmap', style={'height': '100%'}),
                          style={'flex': 1, 'minWidth': 0}),
-                html.Div(dcc.Graph(id='token-detail-probe-bar', style={'height': '24vh'}),
+                html.Div(dcc.Graph(id='token-detail-probe-bar', style={'height': '100%'}),
                          style={'flex': 1, 'minWidth': 0}),
-                html.Div(dcc.Graph(id='token-detail-dependency-curve', style={'height': '24vh'}),
+                html.Div(dcc.Graph(id='token-detail-dependency-curve', style={'height': '100%'}),
                          style={'flex': 1, 'minWidth': 0}),
             ], style={'display': 'flex', 'flex': 1, 'minHeight': 0}),
             html.Div(dcc.Slider(

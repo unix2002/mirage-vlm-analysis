@@ -12,4 +12,4 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '.'))
 from dashboard.app import app
 
 if __name__ == '__main__':
-    app.run(debug=True, port=8056)
+    app.run(debug=True, dev_tools_ui=False, port=8056)

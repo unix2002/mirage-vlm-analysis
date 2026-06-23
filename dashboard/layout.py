@@ -19,67 +19,63 @@ _HEADER_CLASS = "py-1 small font-weight-bold"
 def create_sidebar():
     return html.Div([
         dbc.Card([
-            dbc.CardHeader("Step 1: Sample Selection", className=_HEADER_CLASS),
+            dbc.CardHeader("Step 1: Sample Selection & UMAP Tuner", className=_HEADER_CLASS),
             dbc.CardBody([
                 dcc.Graph(
                     id='level1-scatter', 
                     figure=create_level1_landscape(LOADER.get_data()),
                     style={'height': '55vh', 'width': '100%'},
                     config={'responsive': True}
-                )
-            ], className="p-0")
-        ], className="mb-2"),
-        
-        # UMAP Tuner Controls
-        dbc.Card([
-            dbc.CardHeader("UMAP Parameter Tuner", className=_HEADER_CLASS),
-            dbc.CardBody([
-                html.Div([
-                    html.Label("Nearest Neighbors (n_neighbors)", className="small text-muted mb-0"),
-                    dcc.Slider(
-                        id='umap-neighbors-slider',
-                        min=2, max=30, step=1, value=5,
-                        marks={2: '2', 15: '15', 30: '30'},
-                        className="p-0"
-                    ),
-                ], className="mb-3"),
-                
-                html.Div([
-                    html.Label("Minimum Distance (min_dist)", className="small text-muted mb-0"),
-                    dcc.Slider(
-                        id='umap-dist-slider',
-                        min=0.0, max=1.0, step=0.05, value=0.3,
-                        marks={0: '0', 0.5: '0.5', 1: '1'},
-                        className="p-0"
-                    ),
-                ], className="mb-2"),
-
-                dbc.Checkbox(
-                    id="umap-flippers-toggle",
-                    label="Highlight Plan Flippers",
-                    value=False,
-                    className="small text-muted mb-2"
                 ),
-
+                html.Hr(className="my-2"),
                 html.Div([
-                    html.Label("Color Metric", className="small text-muted mb-0"),
-                    dcc.Dropdown(
-                        id='umap-color-dropdown',
-                        options=[
-                            {'label': 'Reasoning Intensity (KL)', 'value': 'avg_kl'},
-                            {'label': 'Level ID', 'value': 'level_id'},
-                            {'label': 'Sequence Length', 'value': 'seq_len'},
-                            {'label': 'Num Latent Tokens', 'value': 'num_latent'},
-                            {'label': 'Projection Error', 'value': 'umap_uncertainty'}
-                        ],
-                        value='level_id',
-                        clearable=False,
-                        className="dash-bootstrap"
-                    )
-                ])
-            ], className="px-3 py-2")
-        ], style={'height': '32vh'})
-    ])
+                    html.Div([
+                        html.Label("Nearest Neighbors (n_neighbors)", className="small text-muted mb-0"),
+                        dcc.Slider(
+                            id='umap-neighbors-slider',
+                            min=2, max=30, step=1, value=5,
+                            marks={2: '2', 15: '15', 30: '30'},
+                            className="p-0"
+                        ),
+                    ], className="mb-3"),
+                    
+                    html.Div([
+                        html.Label("Minimum Distance (min_dist)", className="small text-muted mb-0"),
+                        dcc.Slider(
+                            id='umap-dist-slider',
+                            min=0.0, max=1.0, step=0.05, value=0.3,
+                            marks={0: '0', 0.5: '0.5', 1: '1'},
+                            className="p-0"
+                        ),
+                    ], className="mb-2"),
+
+                    dbc.Checkbox(
+                        id="umap-flippers-toggle",
+                        label="Highlight Plan Flippers",
+                        value=False,
+                        className="small text-muted mb-2"
+                    ),
+
+                    html.Div([
+                        html.Label("Color Metric", className="small text-muted mb-0"),
+                        dcc.Dropdown(
+                            id='umap-color-dropdown',
+                            options=[
+                                {'label': 'Reasoning Intensity (KL)', 'value': 'avg_kl'},
+                                {'label': 'Level ID', 'value': 'level_id'},
+                                {'label': 'Sequence Length', 'value': 'seq_len'},
+                                {'label': 'Num Latent Tokens', 'value': 'num_latent'},
+                                {'label': 'Projection Error', 'value': 'umap_uncertainty'}
+                            ],
+                            value='level_id',
+                            clearable=False,
+                            className="dash-bootstrap"
+                        )
+                    ])
+                ], className="px-3 py-0")
+            ], className="p-0", style={'display': 'flex', 'flexDirection': 'column', 'height': '100%'})
+        ], style={'height': '100%'})
+    ], style={'height': '100%'})
 
 
 def create_main_content():
@@ -108,15 +104,15 @@ def create_main_content():
                 create_level2_probing_row(),
                 create_level2_bottom(),
             ], style={'display': 'flex', 'flexDirection': 'column', 'height': '100%'}), className="p-1")
-        ], style={'height': '55vh'}, className="mb-2"),
+        ], style={'height': '55vh', 'flexShrink': 0}, className="mb-2"),
 
         # Level 3: Token Specifics
         dbc.Card([
             dbc.CardHeader(html.Div(id='level3-instructions', children="Step 3: Token Details"),
                            className=_HEADER_CLASS),
-            dbc.CardBody(create_level3_detail(), className="p-1")
-        ], style={'height': '31vh'})
-    ])
+            dbc.CardBody(create_level3_detail(), className="p-1", style={'display': 'flex', 'flexDirection': 'column', 'flex': 1, 'minHeight': 0})
+        ], style={'flex': 1, 'minHeight': 0, 'display': 'flex', 'flexDirection': 'column'})
+    ], style={'height': '100%', 'display': 'flex', 'flexDirection': 'column'})
 
 
 def create_layout():
