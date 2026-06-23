@@ -363,7 +363,7 @@ class RealDataLoader:
             self.X_pca = pca.fit_transform(self.X_norm)
 
         if self.X_pca is not None and HAS_UMAP and self.valid_indices:
-            reducer = umap.UMAP(n_neighbors=5, min_dist=0.3, metric='cosine',
+            reducer = umap.UMAP(n_neighbors=12, min_dist=0.8, metric='cosine',
                                 n_components=2, random_state=42)
             coords = reducer.fit_transform(self.X_pca)
 

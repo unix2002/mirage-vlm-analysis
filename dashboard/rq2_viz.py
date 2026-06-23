@@ -62,7 +62,7 @@ def build_rq2_static_bar(probe_results=None):
         )
     )
     fig.update_layout(
-        title=dict(text="Layer-wise Decodability (Global)", font=dict(size=16, color='#1f2937')),
+        title=dict(text="RQ2: Layer-wise Decodability (Global)", font=dict(size=16, color='#1f2937')),
         xaxis_title="Layer",
         yaxis_title="Accuracy",
         template="plotly_white",
@@ -156,23 +156,26 @@ def build_rq2_dynamic_grid(sample_id, layer=26, per_sample_payload=None):
 
     fig = go.Figure()
     
-    # Background for non-true directions
+    # Background for non-true directions. Fixed 0..1 scale so shade maps to absolute
+    # probability (otherwise each trace auto-scales to its own max and colours mislead).
     fig.add_trace(go.Heatmap(
         z=z_other,
         x=RQ2_GRID_DIRECTIONS,
         y=row_labels,
         colorscale=[[0, "#f0f7ff"], [1, "#93c5fd"]],
+        zmin=0, zmax=1,
         showscale=False,
         xgap=1, ygap=1,
         hoverinfo='skip'
     ))
-    
-    # Foreground for true directions
+
+    # Foreground for true directions (same fixed 0..1 scale).
     fig.add_trace(go.Heatmap(
         z=z_true,
         x=RQ2_GRID_DIRECTIONS,
         y=row_labels,
         colorscale=[[0, "#e0f2fe"], [1, "#06b6d4"]],
+        zmin=0, zmax=1,
         text=text_vals,
         texttemplate="%{text}",
         textfont={"size": 14, "color": "#1f2937"},
@@ -182,7 +185,7 @@ def build_rq2_dynamic_grid(sample_id, layer=26, per_sample_payload=None):
     ))
 
     fig.update_layout(
-        title=dict(text="Decodability Grid", font=dict(size=16, color='#1f2937')),
+        title=dict(text="RQ2: Decodability Grid", font=dict(size=16, color='#1f2937')),
         xaxis_title="Direction",
         yaxis_title="Sequence Step",
         template="plotly_white",

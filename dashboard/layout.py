@@ -4,12 +4,23 @@ from .components.level1_landscape import create_level1_landscape
 from .components.level2_path import create_level2_top, create_level2_bottom, create_level2_probing_row
 from .components.level3_detail import create_level3_detail
 from .data_loader import LOADER
+from .help_content import help_page, HELP_OVERLAY_STYLE
 
 
 def create_header():
     return dbc.Row([
-        dbc.Col(html.H4("Latent Reasoning VLM Analysis",
-                    className="m-0", style={'paddingLeft': '10px', 'color': '#1f2937', 'fontSize': '18px'}), width=12),
+        dbc.Col(
+            html.Div([
+                html.H4("Latent Reasoning VLM Analysis",
+                        className="m-0", style={'color': '#1f2937', 'fontSize': '18px'}),
+                dbc.Button("?", id="help-btn-global", color="info", outline=True, size="sm",
+                           title="About this dashboard",
+                           className="ms-auto",
+                           style={'borderRadius': '50%', 'width': '30px', 'height': '30px',
+                                  'padding': 0, 'fontWeight': 'bold', 'fontSize': '16px', 'lineHeight': '1'}),
+            ], style={'display': 'flex', 'alignItems': 'center',
+                      'paddingLeft': '10px', 'paddingRight': '14px'}),
+            width=12),
     ], className="py-2 border-bottom bg-light", style={'height': '5vh'})
 
 
@@ -39,7 +50,7 @@ def create_sidebar():
                         html.Label("Nearest Neighbors (n_neighbors)", className="mb-0", style={'color': '#1f2937', 'fontSize': '14px'}),
                         dcc.Slider(
                             id='umap-neighbors-slider',
-                            min=2, max=30, step=1, value=5,
+                            min=2, max=30, step=1, value=12,
                             marks={2: '2', 15: '15', 30: '30'},
                             className="p-0"
                         ),
@@ -49,7 +60,7 @@ def create_sidebar():
                         html.Label("Minimum Distance (min_dist)", className="mb-0", style={'color': '#1f2937', 'fontSize': '14px'}),
                         dcc.Slider(
                             id='umap-dist-slider',
-                            min=0.0, max=1.0, step=0.05, value=0.3,
+                            min=0.0, max=1.0, step=0.05, value=0.8,
                             marks={0: '0', 0.5: '0.5', 1: '1'},
                             className="p-0"
                         ),
@@ -106,11 +117,17 @@ def create_main_content():
                 ], style={'display': 'flex', 'justifyContent': 'space-between', 'alignItems': 'center'}),
                 className="py-1"
             ),
-            dbc.CardBody(html.Div([
-                create_level2_top(),
-                create_level2_probing_row(),
-                create_level2_bottom(),
-            ], style={'display': 'flex', 'flexDirection': 'column', 'height': '100%'}), className="p-1")
+            dbc.CardBody(
+                html.Div([
+                    html.Div([
+                        create_level2_top(),
+                        create_level2_probing_row(),
+                        create_level2_bottom(),
+                    ], style={'display': 'flex', 'flexDirection': 'column', 'height': '100%'}),
+                    # Full-card help overlay shown until a sample is selected (toggle_help_overlay).
+                    html.Div(help_page(), id='level2-help-overlay', style=HELP_OVERLAY_STYLE),
+                ], style={'position': 'relative', 'height': '100%'}),
+                className="p-1")
         ], style={'height': '55vh', 'flexShrink': 0}, className="mb-2"),
 
         # Level 3: Token Specifics
@@ -129,6 +146,9 @@ def create_main_content():
 
 def create_help_modals():
     return html.Div([
+        # Hidden target for the header "?" clientside reload callback.
+        html.Div(id="help-reload-dummy", style={'display': 'none'}),
+
         dbc.Modal([
             dbc.ModalHeader(dbc.ModalTitle("Help: Sample Selection & UMAP Tuner")),
             dbc.ModalBody(dcc.Markdown("""
@@ -165,33 +185,15 @@ As the zoom level becomes more fine-grained, the macro triangles and auras fade 
         ], id="help-modal-step1", is_open=False, size="lg", centered=True),
 
         dbc.Modal([
-            dbc.ModalHeader(dbc.ModalTitle("Help: Reasoning Path Analysis (RQ2 Probe) and Ablation")),
+            dbc.ModalHeader(dbc.ModalTitle("Help: Reasoning Path Analysis")),
             dbc.ModalBody(html.Div([
-                html.P("This section lets you inspect the internal reasoning path. Use 'Probing' to see which maze cells the model focuses on at each step. Use 'Ablation' to see what happens when specific reasoning paths are altered. Click on a sample in Step 1 to load it here."),
-          
-                html.H6("Understanding the Probing Figures:", className="mt-3 mb-2 font-weight-bold"),
-                html.Div([
-                    html.P([
-                        html.B("Layer-wise Bar Chart: "),
-                        "Shows overall probe accuracy across transformer layers. Higher bars = more directional information. "
-                        "The dashed red line is the random baseline (0.25 = 1/4 directions in a maze). "
-                        "Layers above baseline contain useful spatial information."
-                    ]),
-                    html.P([
-                        html.B("Decodability Grid: "),
-                        "For a selected sample, shows per-step accuracy for each direction. "
-                        "Each row is a planning step; each column is a compass direction. "
-                        "Darker cyan = higher probability; lighter cyan = lower. "
-                        "The bold text highlights true moves (where the model actually stepped). "
-                        "Patterns show which steps are most predictable and where the model's reasoning varies."
-                    ], className="mb-0")
+                html.P("Step 2 shows the reasoning path for the sample you selected in Step 1. It has two tabs:"),
+                html.Ul([
+                    html.Li([html.B("Probing"), " — how decodable the next move is from the latent tokens (RQ2)."]),
+                    html.Li([html.B("Ablation"), " — what happens to the answer when latent tokens are switched off (RQ3)."]),
                 ]),
-                
-                html.Hr(),
-                html.P(
-                    html.Small("Click 'Ablation' tab to see what happens when tokens are removed."),
-                    className="text-muted"
-                )
+                html.P("Click a sample point in Step 1 to load it here, then click any latent-token "
+                       "heatmap to drill into per-token detail in Step 3."),
             ])),
         ], id="help-modal-step2", is_open=False, size="lg", centered=True),
 

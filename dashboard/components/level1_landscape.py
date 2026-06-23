@@ -124,29 +124,6 @@ def create_level1_landscape(data_source, color_metric='level_id', zoom_level=1.0
 
     fig = go.Figure()
 
-    if HAS_SCIPY and len(df) > 5 and zoom_level < 3.0:
-        for direction, color in _DIRECTION_COLORS.items():
-            subset = df[df['move_direction'] == direction]
-            if len(subset) > 2:
-                points = subset[['umap_x', 'umap_y']].values
-                if np.unique(points, axis=0).shape[0] > 2:
-                    try:
-                        hull = ConvexHull(points)
-                        hull_points = points[hull.vertices]
-                        hull_points = np.vstack([hull_points, hull_points[0]])
-
-                        fig.add_trace(go.Scatter(
-                            x=hull_points[:, 0],
-                            y=hull_points[:, 1],
-                            fill="toself",
-                            fillcolor=color,
-                            line=dict(color='rgba(0,0,0,0)'),
-                            hoverinfo='skip',
-                            showlegend=False,
-                            name=f"{direction} Cluster"
-                        ))
-                    except: pass
-
     # Zoom thresholds
     show_macro = zoom_level < 20.0
     show_micro = zoom_level >= 15.0

@@ -16,7 +16,8 @@ from .ablation_v2 import (
     subset_lattice,
 )
 from ..rq2_viz import build_rq2_static_bar, build_rq2_dynamic_grid
-from ..components import info_tip
+from ..components import info_tip, tip_body
+from ..help_content import HELP_OVERLAY_STYLE
 
 
 def _load_maze_image(path):
@@ -86,20 +87,26 @@ def _kl_fingerprint(sample_id, ablated_ranks):
         selected = cur_mask is not None and c['mask'] == cur_mask
         changed = c.get('changed', False)
         label = '+'.join('T' + str(r) for r in c['ranks'])
-        border_color = '#eab308' if selected else ('#dc3545' if changed else 'transparent')
         hover = f"{label}  ·  KL {c['kl']:.5f}"
         if changed:
             hover += '  ·  plan changed'
         hover += '  ·  click to ablate this set'
+        # Stronger highlight: thicker border plus an outer glow for selection / plan-flip.
+        if selected:
+            border, shadow = '2px solid #eab308', '0 0 0 3px rgba(234,179,8,0.55)'
+        elif changed:
+            border, shadow = '2px solid #dc3545', '0 0 0 3px rgba(220,53,69,0.45)'
+        else:
+            border, shadow = '1px solid transparent', 'none'
         return html.Div(
             [_dot(i in c['ranks']) for i in range(n)],
             id={'type': 'fingerprint-cell', 'mask': c['mask']}, n_clicks=0,
             title=hover,
             style={
-                'display': 'flex', 'gap': '1px', 'justifyContent': 'center', 'alignItems': 'center',
-                'padding': '2px 1px', 'borderRadius': '3px', 'cursor': 'pointer',
+                'display': 'flex', 'gap': '2px', 'justifyContent': 'center', 'alignItems': 'center',
+                'padding': '4px 2px', 'borderRadius': '3px', 'cursor': 'pointer',
                 'backgroundColor': f'rgba(6,182,212,{alpha:.3f})',
-                'border': f'1px solid {border_color}',
+                'border': border, 'boxShadow': shadow,
             })
 
     columns = []
@@ -111,19 +118,26 @@ def _kl_fingerprint(sample_id, ablated_ranks):
                 'textAlign': 'center', 'marginBottom': '2px',
             }),
             html.Div([_cell(c) for c in kcells],
-                     style={'display': 'flex', 'flexDirection': 'column', 'gap': '1px'}),
+                     style={'display': 'flex', 'flexDirection': 'column', 'gap': '2px'}),
         ], style={'flex': 1, 'minWidth': 0}))
 
     return html.Div([
-        html.Div([info_tip("All 63 token-ablation combos. Columns = k tokens zeroed. Shading = KL. Red border = plan changed. Amber = selected. Click to ablate."),
+        html.Div([info_tip(tip_body(
+            "RQ3: KL Fingerprint",
+            "Every way the 6 latent tokens can be switched off, so you can see which ones the answer actually relies on.",
+            [
+                "Columns group combinations by how many tokens are off (k1 up to k6).",
+                "Dots in a cell show which tokens (T0 to T5) are off.",
+                "Darker shading = a bigger change to the output (higher KL).",
+                [html.B("Red border: "), "the predicted plan actually changed."],
+                [html.B("Amber border: "), "your current selection."],
+                "Click any cell to apply that ablation and update the panel.",
+            ])),
             'RQ3: KL Fingerprint'
         ], style={
             'fontSize': '14px', 'color': '#1f2937',
             'fontFamily': '"Open Sans", verdana, arial, sans-serif',
             'padding': '2px 4px 1px',
-        }),
-        html.Div('shade = KL · dots = tokens zeroed (T0–T5) · red = plan changed · hover for value', style={
-            'fontSize': '12px', 'color': '#1f2937', 'padding': '0 4px 2px',
         }),
         html.Div(columns, style={
             'display': 'flex', 'gap': '3px', 'padding': '0 4px 4px', 'alignItems': 'flex-start',
@@ -153,6 +167,16 @@ def _maze_view(sample, ablated_ranks=None):
         return html.Div('Maze image unavailable.', className='p-2', style={'color': '#1f2937', 'fontSize': '14px'})
 
     return html.Div([
+        html.Div(info_tip(tip_body(
+            "Maze Representation",
+            "The maze for the selected sample, with the model's planned route drawn on top.",
+            [
+                [html.B("Black squares: "), "obstacles."],
+                [html.B("Green square: "), "the goal."],
+                [html.B("Black dot: "), "the starting position."],
+                [html.B("Blue line: "), "the path."],
+                [html.B("Red line: "), "the changed path, shown when an ablation reroutes the plan."],
+            ])), style={'position': 'absolute', 'top': 2, 'left': 4, 'zIndex': 10}),
         html.Img(src=image_src, style={
             'maxWidth': '100%',
             'maxHeight': '100%',
@@ -160,7 +184,7 @@ def _maze_view(sample, ablated_ranks=None):
             'border': '1px solid #dee2e6',
             'backgroundColor': '#f8f9fa'
         })
-    ], style={'width': '100%', 'height': '100%', 'display': 'flex',
+    ], style={'width': '100%', 'height': '100%', 'display': 'flex', 'position': 'relative',
               'alignItems': 'center', 'justifyContent': 'center',
               'overflow': 'hidden'})
 
@@ -190,7 +214,9 @@ def _token_grid(sample, ablated_ranks=None):
             z=token['spatial_focus'],
             colorscale='Viridis',
             showscale=False,
-            opacity=0.45
+            opacity=0.45,
+            hovertemplate=f"{token['token_id']}<extra></extra>",
+            hoverlabel=dict(font=dict(size=14)),
         ))
         heatmap.update_layout(
             margin=dict(l=0, r=0, t=0, b=0),
@@ -230,8 +256,13 @@ def _token_grid(sample, ablated_ranks=None):
         )
 
     return html.Div([
-        html.Div([info_tip("Per-token self-attention heatmaps. Click a token to inspect in Step 3. Red border = ablated, amber = selected."),
-            "Spatial Focus (latent token heatmaps — clickable)"
+        html.Div([info_tip(tip_body(
+            "RQ1: Latent Token Heatmaps",
+            "The heatmaps in this figure show the spatial attention of each latent token to a simplified maze representation.",
+            [
+                "To see the original maze image and additional token specific probing information, click on one of the heatmaps to select it.",
+            ])),
+            "RQ1: Latent Token Heatmaps (click a token)"
         ], style={
             'fontSize': '14px', 'color': '#1f2937',
             'textTransform': 'uppercase', 'letterSpacing': '0.05em',
@@ -322,7 +353,7 @@ def _dose_response_graph(sample_id, ablated_ranks):
                                  name='current selection', showlegend=True))
 
     fig.update_layout(
-        title=dict(text='Dose-Response Curve', font=dict(size=16, color='#1f2937')),
+        title=dict(text='RQ3: Dose-Response Curve', font=dict(size=16, color='#1f2937')),
         template='plotly_white',
         margin=dict(l=30, r=28, t=40, b=18), font=dict(size=14, color='#1f2937'),
         hovermode='x unified', paper_bgcolor='rgba(0,0,0,0)',
@@ -338,7 +369,16 @@ def _dose_response_graph(sample_id, ablated_ranks):
         html.Div(dcc.Graph(figure=fig, config={'displayModeBar': False},
                            style={'height': '100%', 'width': '100%'}),
                  style={'flex': 1, 'minHeight': 0, 'overflow': 'hidden'}),
-        html.Div(info_tip("Median KL vs tokens zeroed. Band = min–max. Dashed = % plan changed."),
+        html.Div(info_tip(tip_body(
+            "RQ3: Dose-Response Curve",
+            "How much the answer drifts as you remove more latent tokens. Removing more usually means a bigger change.",
+            [
+                "X axis: number of tokens zeroed (0 up to 6).",
+                [html.B("Cyan line: "), "median KL change. The band is the min to max range."],
+                [html.B("Dotted line (right axis): "), "percent of combinations that flipped the plan (0 to 100)."],
+                [html.B("Amber dot: "), "your current selection."],
+                "Heads up: the dot and the dotted line use different axes, so don't compare their heights.",
+            ])),
                  style={'position': 'absolute', 'top': 2, 'left': 4, 'zIndex': 10}),
     ], style={'height': '32vh', 'display': 'flex', 'position': 'relative',
               'flexDirection': 'column', 'padding': '0 4px'})
@@ -390,6 +430,14 @@ def update_level2_logic(clickData, data=None):
 
 def register_level2_callbacks(app):
     @app.callback(
+        Output('level2-help-overlay', 'style'),
+        Input('level1-scatter', 'clickData'),
+    )
+    def toggle_help_overlay(clickData):
+        # Help spans the whole Step 2 card until a sample is selected.
+        return {**HELP_OVERLAY_STYLE, 'display': 'none' if clickData else 'block'}
+
+    @app.callback(
         [Output('level2-maze-pane', 'children'),
          Output('ablation-state', 'data'),
          Output('level2-header-title', 'children')],
@@ -425,18 +473,23 @@ def register_level2_callbacks(app):
     )
     def update_probing_pane(clickData, active_tab):
         if not clickData:
-            return html.Div("Select a Sample (Step 1)", style={
-                'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center',
-                'height': '100%', 'color': '#1f2937', 'fontSize': '14px',
-                'textTransform': 'uppercase', 'letterSpacing': '0.05em',
-                'padding': '8px',
-            })
+            # Empty state is covered by the full-card help overlay (level2-help-overlay).
+            return html.Div()
         if active_tab != 'probing':
             return html.Div()
         sample_id = _get_sample_id(clickData)
         return html.Div([
             html.Div([
-                html.Div(info_tip("Per-step direction probe probabilities. Brighter cells = probe more confident."),
+                html.Div(info_tip(tip_body(
+            "RQ2: Decodability Grid",
+            "Can a simple classifier read the next move out of the latent tokens, step by step, for this sample?",
+            [
+                "Rows: planned steps (step 1 at the top). Columns: the 4 directions.",
+                "Each cell: the probe's probability for that direction (mean +/- std across tokens).",
+                "The true move at each step is highlighted in stronger cyan.",
+                "These are probe readings, not the model's own output.",
+                "Always 9 rows, so a short path leaves some rows blank.",
+            ])),
                          style={'position': 'absolute', 'top': 2, 'left': 4, 'zIndex': 10}),
                 dcc.Graph(id='rq2-dynamic-grid',
                           figure=build_rq2_dynamic_grid(sample_id),
@@ -444,7 +497,20 @@ def register_level2_callbacks(app):
                           style={'flex': 1, 'minWidth': 0}),
             ], style={'position': 'relative', 'flex': 1, 'minWidth': 0}),
             html.Div([
-                html.Div(info_tip("Probe accuracy per model layer. Red dashed = random baseline (25%)."),
+                html.Div(info_tip(tip_body(
+            "RQ2: Layer-wise Decodability",
+            [
+                "A model processes information in stacked ", html.B("layers"),
+                ". This chart asks, at each layer, how clearly the next move is written into the "
+                "latent tokens. Taller bars mean it is easier to read out.",
+            ],
+            [
+                "Each bar: a classifier's accuracy at that layer, measured over all samples (not just the one you picked).",
+                [html.B("Red dashed line: "), "pure guessing (0.25, since there are 4 directions)."],
+                "Bars above that line mean the tokens really do carry the move information.",
+                "The tallest bars point to the layers where the answer is most readable.",
+                "This build shows the final layers (25, 26, 27).",
+            ])),
                          style={'position': 'absolute', 'top': 2, 'left': 4, 'zIndex': 10}),
                 dcc.Graph(id='rq2-static-bar',
                           figure=build_rq2_static_bar(),
