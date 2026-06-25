@@ -6,6 +6,8 @@ Interactive visual analytics for inspecting latent reasoning in vision-language 
 **Base codebase:** [UMass-Embodied-AGI/Mirage](https://github.com/UMass-Embodied-AGI/Mirage)
 
 ---
+## Usage Video Demo:
+https://drive.google.com/file/d/13FyVD10AFh5rKHjfeCZkWXD56WCkqFgV/view?usp=drive_link
 
 ## Quick Start: Running the Dashboard
 
